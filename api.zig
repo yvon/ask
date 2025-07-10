@@ -44,6 +44,8 @@ pub fn makeRequest(allocator: std.mem.Allocator, cfg: config.Config, request: Re
     try json.stringify(request, .{ .emit_null_optional_fields = false }, json_stream.writer());
     const json_data = json_stream.getWritten();
 
+    std.debug.print("JSON data: {s}\n", .{json_data});
+
     // Make HTTP request
     var client = http.Client{ .allocator = allocator };
     const uri = try std.Uri.parse("https://api.anthropic.com/v1/messages");

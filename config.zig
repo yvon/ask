@@ -8,7 +8,6 @@ pub const Config = struct {
     model: []const u8 = "claude-sonnet-4-20250514",
     prompt: []const u8,
     api_key: []const u8,
-    input_files: [][]const u8,
 };
 
 pub fn parseArgs(allocator: std.mem.Allocator) !Config {
@@ -24,7 +23,14 @@ pub fn parseArgs(allocator: std.mem.Allocator) !Config {
 
     var i: usize = 1;
     while (i < args.len) : (i += 1) {
-        if (std.mem.eql(u8, args[i], "--max-tokens") and i + 1 < args.len) {
+        if (std.mem.eql(u8, args[i], "--")) {
+            // Double dash separator - everything after is prompt
+            i += 1;
+            while (i < args.len) : (i += 1) {
+                try prompt_args.append(args[i]);
+            }
+            break;
+        } else if (std.mem.eql(u8, args[i], "--max-tokens") and i + 1 < args.len) {
             max_tokens = std.fmt.parseInt(u32, args[i + 1], 10) catch {
                 std.debug.print("Invalid max-tokens value: {s}\n", .{args[i + 1]});
                 std.process.exit(1);
@@ -74,11 +80,11 @@ pub fn parseArgs(allocator: std.mem.Allocator) !Config {
             std.debug.print("Error reading file '{s}': {}\n", .{ file_path, err });
             std.process.exit(1);
         };
-        
+
         if (prompt_builder.items.len > 0) {
             try prompt_builder.appendSlice("\n\n");
         }
-        
+
         try prompt_builder.appendSlice(file_path);
         try prompt_builder.appendSlice(":\n");
         try prompt_builder.appendSlice(file_content);
@@ -119,6 +125,5 @@ pub fn parseArgs(allocator: std.mem.Allocator) !Config {
         .model = model,
         .prompt = final_prompt,
         .api_key = api_key,
-        .input_files = input_files.items,
     };
 }
