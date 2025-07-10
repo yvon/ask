@@ -10,8 +10,27 @@ pub const Config = struct {
     api_key: []const u8,
 };
 
+const usage = @embedFile("usage.txt");
+
+fn printUsage() void {
+    std.debug.print("{s}\n", .{usage});
+}
+
 pub fn parseArgs(allocator: std.mem.Allocator) !Config {
     const args = try std.process.argsAlloc(allocator);
+
+    // Check for help flag or no arguments
+    if (args.len == 1) {
+        printUsage();
+        std.process.exit(0);
+    }
+
+    for (args[1..]) |arg| {
+        if (std.mem.eql(u8, arg, "-h") or std.mem.eql(u8, arg, "--help")) {
+            printUsage();
+            std.process.exit(0);
+        }
+    }
 
     var max_tokens: u32 = 5000;
     var temperature: f32 = 0.0;
@@ -67,7 +86,7 @@ pub fn parseArgs(allocator: std.mem.Allocator) !Config {
     // Add file contents first
     for (input_files.items) |file_path| {
         const file_content = std.fs.cwd().readFileAlloc(allocator, file_path, 1024 * 1024) catch |err| {
-            std.debug.print("Error reading file '{s}': {}\n", .{ file_path, err });
+            std.debug.print("Error reading file '{s}': {any}\n", .{ file_path, err });
             std.process.exit(1);
         };
 
@@ -98,13 +117,15 @@ pub fn parseArgs(allocator: std.mem.Allocator) !Config {
     const final_prompt = prompt_builder.items;
 
     if (final_prompt.len == 0) {
-        std.debug.print("No prompt provided via arguments or stdin\n", .{});
+        std.debug.print("Error: No prompt provided via arguments or stdin\n\n", .{});
+        printUsage();
         std.process.exit(1);
     }
 
     // Get API key from environment
     const api_key = std.process.getEnvVarOwned(allocator, "ANTHROPIC_API_KEY") catch |err| {
-        std.debug.print("ANTHROPIC_API_KEY not found: {}\n", .{err});
+        std.debug.print("Error: ANTHROPIC_API_KEY not found: {any}\n", .{err});
+        std.debug.print("Please set your Anthropic API key as an environment variable.\n", .{});
         std.process.exit(1);
     };
 
