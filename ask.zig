@@ -10,11 +10,12 @@ pub fn main() !void {
     // Parse command line arguments
     const args = try std.process.argsAlloc(allocator);
 
-    var max_tokens: u32 = 1024;
+    var max_tokens: u32 = 5000;
     var temperature: f32 = 0.0;
     var prefill: ?[]const u8 = null;
     var system: ?[]const u8 = null;
     var model: []const u8 = "claude-sonnet-4-20250514";
+    var prompt_args = std.ArrayList([]const u8).init(allocator);
 
     var i: usize = 1;
     while (i < args.len) : (i += 1) {
@@ -39,14 +40,36 @@ pub fn main() !void {
         } else if (std.mem.eql(u8, args[i], "--model") and i + 1 < args.len) {
             model = args[i + 1];
             i += 1;
+        } else {
+            // This is a prompt argument
+            try prompt_args.append(args[i]);
         }
     }
 
-    // Read prompt from stdin
+    // Read from stdin first
     const stdin = std.io.getStdIn().reader();
-    const prompt = try stdin.readAllAlloc(allocator, 1024 * 1024);
+    const stdin_content = stdin.readAllAlloc(allocator, 1024 * 1024) catch "";
 
-    if (prompt.len == 0) {
+    // Build prompt starting with stdin content
+    var prompt_builder = std.ArrayList(u8).init(allocator);
+    
+    // Add stdin content first
+    if (stdin_content.len > 0) {
+        try prompt_builder.appendSlice(stdin_content);
+    }
+
+    // Then append prompt arguments
+    for (prompt_args.items, 0..) |arg, idx| {
+        if (prompt_builder.items.len > 0 or idx > 0) {
+            try prompt_builder.append(' ');
+        }
+        try prompt_builder.appendSlice(arg);
+    }
+
+    const final_prompt = prompt_builder.items;
+
+    if (final_prompt.len == 0) {
+        std.debug.print("No prompt provided via arguments or stdin\n", .{});
         std.process.exit(1);
     }
 
@@ -62,11 +85,12 @@ pub fn main() !void {
         temperature: f32,
         messages: []const Message,
         system: ?[]const u8 = null,
+        stream: bool = true,
     };
 
     // Build messages array
     var messages = std.ArrayList(Message).init(allocator);
-    try messages.append(Message{ .role = "user", .content = prompt });
+    try messages.append(Message{ .role = "user", .content = final_prompt });
 
     if (prefill) |prefill_content| {
         try messages.append(Message{ .role = "assistant", .content = prefill_content });
@@ -78,10 +102,11 @@ pub fn main() !void {
         .messages = messages.items,
         .system = system,
         .model = model,
+        .stream = true,
     };
 
     // Allocate reusable buffer
-    var buffer = try allocator.alloc(u8, 1024 * 1024);
+    const buffer = try allocator.alloc(u8, 1024 * 1024);
 
     // Serialize JSON to buffer without null optional fields
     var json_stream = std.io.fixedBufferStream(buffer);
@@ -121,26 +146,61 @@ pub fn main() !void {
     try req.finish();
     try req.wait();
 
-    // Reuse same buffer for response
-    const bytes_read = try req.readAll(buffer);
-    const response_body = buffer[0..bytes_read];
+    // Process streaming response
+    var response_reader = req.reader();
+    const line_buffer = try allocator.alloc(u8, 4096);
 
-    // Parse JSON response with ignore_unknown_fields
-    const Response = struct {
-        content: []const struct {
-            text: []const u8,
-        },
-    };
+    while (true) {
+        const line = response_reader.readUntilDelimiterOrEof(line_buffer, '\n') catch |err| {
+            if (err == error.EndOfStream) break;
+            return err;
+        };
 
-    const parsed = json.parseFromSlice(Response, allocator, response_body, .{
-        .ignore_unknown_fields = true,
-    }) catch |err| {
-        std.debug.print("Error parsing JSON: {}\n", .{err});
-        std.debug.print("Response body: {s}\n", .{response_body});
-        std.process.exit(1);
-    };
+        if (line) |l| {
+            const trimmed = std.mem.trim(u8, l, " \t\r\n");
+            if (trimmed.len == 0) continue;
 
-    if (parsed.value.content.len > 0) {
-        std.debug.print("{s}\n", .{parsed.value.content[0].text});
+            // Parse SSE format
+            if (std.mem.startsWith(u8, trimmed, "data: ")) {
+                const data_json = trimmed[6..];
+
+                // Parse the JSON event
+                const Event = struct {
+                    type: []const u8,
+                    delta: ?struct {
+                        type: []const u8,
+                        text: ?[]const u8 = null,
+                    } = null,
+                };
+
+                const parsed = json.parseFromSlice(Event, allocator, data_json, .{
+                    .ignore_unknown_fields = true,
+                }) catch {
+                    // Skip unparseable events
+                    continue;
+                };
+
+                // Handle content_block_delta events with text
+                if (std.mem.eql(u8, parsed.value.type, "content_block_delta")) {
+                    if (parsed.value.delta) |delta| {
+                        if (std.mem.eql(u8, delta.type, "text_delta")) {
+                            if (delta.text) |text| {
+                                try std.io.getStdOut().writer().print("{s}", .{text});
+                            }
+                        }
+                    }
+                }
+
+                // Handle message_stop event
+                if (std.mem.eql(u8, parsed.value.type, "message_stop")) {
+                    break;
+                }
+            }
+        } else {
+            break;
+        }
     }
+
+    // Print final newline
+    try std.io.getStdOut().writer().print("\n", .{});
 }
