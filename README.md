@@ -33,16 +33,6 @@ Examples:
   echo "Hello world" | ask "Translate to Spanish"
   ask --temperature 0.7 --max-tokens 1000 "Write a poem"
   ask --system "You are a helpful coding assistant" main.c "Review this code"
-
-
-### Options
-
-- `--max-tokens <number>` - Maximum tokens to generate (default: 5000)
-- `--temperature <float>` - Sampling temperature 0.0-1.0 (default: 0.0)
-- `--prefill <text>` - Text to prefill the assistant's response
-- `--system <text>` - System message to set context
-- `--model <name>` - Model to use (default: claude-sonnet-4-20250514)
-- `-h, --help` - Show help message
 ```
 
 When Claude's response contains code blocks (marked with ```), the tool automatically creates temporary files in your system's temp directory. You can then copy these files to your project as needed.
