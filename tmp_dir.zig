@@ -1,10 +1,29 @@
 const std = @import("std");
+const builtin = @import("builtin");
 
 pub fn getTempDir(allocator: std.mem.Allocator) ![]u8 {
-    if (std.posix.getenv("TMPDIR")) |tmpdir| {
-        return try allocator.dupe(u8, tmpdir);
-    }
+    // Try to get TMPDIR environment variable in a cross-platform way
+    if (std.process.getEnvVarOwned(allocator, "TMPDIR")) |tmpdir| {
+        return tmpdir;
+    } else |err| switch (err) {
+        error.EnvironmentVariableNotFound => {
+            // Try other common temp directory environment variables
+            const temp_vars = [_][]const u8{ "TEMP", "TMP" };
+            for (temp_vars) |var_name| {
+                if (std.process.getEnvVarOwned(allocator, var_name)) |tmpdir| {
+                    return tmpdir;
+                } else |_| {
+                    continue;
+                }
+            }
 
-    // Default fallback
-    return try allocator.dupe(u8, "/tmp");
+            // Platform-specific fallbacks
+            const default_temp = switch (builtin.os.tag) {
+                .windows => "C:\\temp",
+                else => "/tmp",
+            };
+            return try allocator.dupe(u8, default_temp);
+        },
+        else => return err,
+    }
 }
