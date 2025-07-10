@@ -8,6 +8,7 @@ pub const Config = struct {
     model: []const u8 = "claude-sonnet-4-20250514",
     prompt: []const u8,
     api_key: []const u8,
+    input_files: [][]const u8,
 };
 
 pub fn parseArgs(allocator: std.mem.Allocator) !Config {
@@ -19,6 +20,7 @@ pub fn parseArgs(allocator: std.mem.Allocator) !Config {
     var system: ?[]const u8 = null;
     var model: []const u8 = "claude-sonnet-4-20250514";
     var prompt_args = std.ArrayList([]const u8).init(allocator);
+    var input_files = std.ArrayList([]const u8).init(allocator);
 
     var i: usize = 1;
     while (i < args.len) : (i += 1) {
@@ -43,6 +45,14 @@ pub fn parseArgs(allocator: std.mem.Allocator) !Config {
         } else if (std.mem.eql(u8, args[i], "--model") and i + 1 < args.len) {
             model = args[i + 1];
             i += 1;
+        } else if (std.mem.eql(u8, args[i], "-i")) {
+            // Handle -i option with multiple files
+            i += 1;
+            while (i < args.len and !std.mem.startsWith(u8, args[i], "--") and !std.mem.eql(u8, args[i], "-i")) {
+                try input_files.append(args[i]);
+                i += 1;
+            }
+            i -= 1; // Back up one since the loop will increment
         } else {
             try prompt_args.append(args[i]);
         }
@@ -55,10 +65,29 @@ pub fn parseArgs(allocator: std.mem.Allocator) !Config {
         stdin_content = stdin.readAllAlloc(allocator, 1024 * 1024) catch "";
     }
 
-    // Build prompt starting with stdin content
+    // Build prompt starting with file contents, then stdin content
     var prompt_builder = std.ArrayList(u8).init(allocator);
 
+    // Add file contents first
+    for (input_files.items) |file_path| {
+        const file_content = std.fs.cwd().readFileAlloc(allocator, file_path, 1024 * 1024) catch |err| {
+            std.debug.print("Error reading file '{s}': {}\n", .{ file_path, err });
+            std.process.exit(1);
+        };
+        
+        if (prompt_builder.items.len > 0) {
+            try prompt_builder.appendSlice("\n\n");
+        }
+        
+        try prompt_builder.appendSlice(file_path);
+        try prompt_builder.appendSlice(":\n");
+        try prompt_builder.appendSlice(file_content);
+    }
+
     if (stdin_content.len > 0) {
+        if (prompt_builder.items.len > 0) {
+            try prompt_builder.appendSlice("\n\n");
+        }
         try prompt_builder.appendSlice(stdin_content);
     }
 
@@ -90,5 +119,6 @@ pub fn parseArgs(allocator: std.mem.Allocator) !Config {
         .model = model,
         .prompt = final_prompt,
         .api_key = api_key,
+        .input_files = input_files.items,
     };
 }
