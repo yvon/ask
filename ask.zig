@@ -2,6 +2,7 @@ const std = @import("std");
 const config = @import("config.zig");
 const api = @import("api.zig");
 const streaming = @import("streaming.zig");
+const parser = @import("parser.zig");
 
 pub fn main() !void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
@@ -13,5 +14,8 @@ pub fn main() !void {
     var req = try api.makeRequest(allocator, cfg, request);
     defer req.deinit();
 
-    try streaming.processStreamingResponse(allocator, &req);
+    const response = try streaming.processStreamingResponse(allocator, &req);
+    defer allocator.free(response);
+    
+    try parser.parseMarkdownAndCreateTempFiles(allocator, response);
 }

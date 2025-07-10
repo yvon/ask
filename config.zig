@@ -23,14 +23,7 @@ pub fn parseArgs(allocator: std.mem.Allocator) !Config {
 
     var i: usize = 1;
     while (i < args.len) : (i += 1) {
-        if (std.mem.eql(u8, args[i], "--")) {
-            // Double dash separator - everything after is prompt
-            i += 1;
-            while (i < args.len) : (i += 1) {
-                try prompt_args.append(args[i]);
-            }
-            break;
-        } else if (std.mem.eql(u8, args[i], "--max-tokens") and i + 1 < args.len) {
+        if (std.mem.eql(u8, args[i], "--max-tokens") and i + 1 < args.len) {
             max_tokens = std.fmt.parseInt(u32, args[i + 1], 10) catch {
                 std.debug.print("Invalid max-tokens value: {s}\n", .{args[i + 1]});
                 std.process.exit(1);
@@ -51,16 +44,13 @@ pub fn parseArgs(allocator: std.mem.Allocator) !Config {
         } else if (std.mem.eql(u8, args[i], "--model") and i + 1 < args.len) {
             model = args[i + 1];
             i += 1;
-        } else if (std.mem.eql(u8, args[i], "-i")) {
-            // Handle -i option with multiple files
-            i += 1;
-            while (i < args.len and !std.mem.startsWith(u8, args[i], "--") and !std.mem.eql(u8, args[i], "-i")) {
-                try input_files.append(args[i]);
-                i += 1;
-            }
-            i -= 1; // Back up one since the loop will increment
         } else {
-            try prompt_args.append(args[i]);
+            // Check if the argument is a file that exists
+            if (std.fs.cwd().access(args[i], .{})) {
+                try input_files.append(args[i]);
+            } else |_| {
+                try prompt_args.append(args[i]);
+            }
         }
     }
 
