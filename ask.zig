@@ -14,6 +14,7 @@ pub fn main() !void {
     var temperature: f32 = 0.0;
     var prefill: ?[]const u8 = null;
     var system: ?[]const u8 = null;
+    var model: []const u8 = "claude-sonnet-4-20250514";
 
     var i: usize = 1;
     while (i < args.len) : (i += 1) {
@@ -35,6 +36,9 @@ pub fn main() !void {
         } else if (std.mem.eql(u8, args[i], "--system") and i + 1 < args.len) {
             system = args[i + 1];
             i += 1;
+        } else if (std.mem.eql(u8, args[i], "--model") and i + 1 < args.len) {
+            model = args[i + 1];
+            i += 1;
         }
     }
 
@@ -53,7 +57,7 @@ pub fn main() !void {
     };
 
     const Request = struct {
-        model: []const u8 = "claude-sonnet-4-20250514",
+        model: []const u8,
         max_tokens: u32,
         temperature: f32,
         messages: []const Message,
@@ -73,6 +77,7 @@ pub fn main() !void {
         .temperature = temperature,
         .messages = messages.items,
         .system = system,
+        .model = model,
     };
 
     // Allocate reusable buffer
