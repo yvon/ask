@@ -1,2 +1,5 @@
-ask.o
+*.o
+*.obj
 ask
+ask.exe
+ask.pdb
