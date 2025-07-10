@@ -2,7 +2,7 @@
 
 A simple CLI tool to interact with Claude AI via the Anthropic API.
 
-I wanted something simpler than aider.chat or Claude Desktop. The goal is to have:
+I wanted something simpler than aider.chat or Claude code. The goal is to have:
 - Full control over prompts without unnecessary overhead
 - Minimal token usage
 - A lightweight CLI for quick questions with or without files
