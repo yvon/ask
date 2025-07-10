@@ -1,5 +1,5 @@
 build:
 	zig build-exe ask.zig
 
-install:
+install: build
 	cp ask ~/.local/bin
