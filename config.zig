@@ -10,13 +10,24 @@ pub const Config = struct {
     api_key: []const u8,
 };
 
+pub const ParsedArgs = struct {
+    max_tokens: u32 = 5000,
+    temperature: f32 = 0.0,
+    prefill: ?[]const u8 = null,
+    system: ?[]const u8 = null,
+    model: []const u8 = "claude-sonnet-4-20250514",
+    prompt_args: std.ArrayList([]const u8),
+    input_files: std.ArrayList([]const u8),
+    api_key: []const u8,
+};
+
 const usage = @embedFile("usage.txt");
 
 fn printUsage() void {
     std.debug.print("{s}\n", .{usage});
 }
 
-pub fn parseArgs(allocator: std.mem.Allocator) !Config {
+pub fn parseArgs(allocator: std.mem.Allocator) !ParsedArgs {
     const args = try std.process.argsAlloc(allocator);
 
     // Check for help flag or no arguments
@@ -73,56 +84,6 @@ pub fn parseArgs(allocator: std.mem.Allocator) !Config {
         }
     }
 
-    // Read from stdin only if data is available
-    var stdin_content: []const u8 = "";
-    if (std.io.getStdIn().isTty() == false) {
-        const stdin = std.io.getStdIn().reader();
-        stdin_content = stdin.readAllAlloc(allocator, 1024 * 1024) catch "";
-    }
-
-    // Build prompt starting with file contents, then stdin content
-    var prompt_builder = std.ArrayList(u8).init(allocator);
-
-    // Add file contents first
-    for (input_files.items) |file_path| {
-        const file_content = std.fs.cwd().readFileAlloc(allocator, file_path, 1024 * 1024) catch |err| {
-            std.debug.print("Error reading file '{s}': {any}\n", .{ file_path, err });
-            std.process.exit(1);
-        };
-
-        if (prompt_builder.items.len > 0) {
-            try prompt_builder.appendSlice("\n\n");
-        }
-
-        try prompt_builder.appendSlice("`");
-        try prompt_builder.appendSlice(file_path);
-        try prompt_builder.appendSlice("`:\n```");
-        try prompt_builder.appendSlice(file_content);
-        try prompt_builder.appendSlice("```\n");
-    }
-
-    if (stdin_content.len > 0) {
-        if (prompt_builder.items.len > 0) {
-            try prompt_builder.appendSlice("\n\n");
-        }
-        try prompt_builder.appendSlice(stdin_content);
-    }
-
-    for (prompt_args.items, 0..) |arg, idx| {
-        if (prompt_builder.items.len > 0 or idx > 0) {
-            try prompt_builder.append(' ');
-        }
-        try prompt_builder.appendSlice(arg);
-    }
-
-    const final_prompt = prompt_builder.items;
-
-    if (final_prompt.len == 0) {
-        std.debug.print("Error: No prompt provided via arguments or stdin\n\n", .{});
-        printUsage();
-        std.process.exit(1);
-    }
-
     // Get API key from environment
     const api_key = std.process.getEnvVarOwned(allocator, "ANTHROPIC_API_KEY") catch |err| {
         std.debug.print("Error: ANTHROPIC_API_KEY not found: {any}\n", .{err});
@@ -130,13 +91,14 @@ pub fn parseArgs(allocator: std.mem.Allocator) !Config {
         std.process.exit(1);
     };
 
-    return Config{
+    return ParsedArgs{
         .max_tokens = max_tokens,
         .temperature = temperature,
         .prefill = prefill,
         .system = system,
         .model = model,
-        .prompt = final_prompt,
+        .prompt_args = prompt_args,
+        .input_files = input_files,
         .api_key = api_key,
     };
 }
