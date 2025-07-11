@@ -37,7 +37,7 @@ Environment Variables:
 
 Examples:
   ask "Why do people like Zig?"
-  ask main.c "Explain this code"
+  ask main.c "Comment the main function"
   echo "Hello world" | ask "Translate to Spanish"
   ask --temperature 0.7 --max-tokens 1000 "Write a poem"
   make 2>&1 | ask "Why this error?"
