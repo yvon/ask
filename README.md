@@ -7,6 +7,8 @@ I wanted something simpler than aider.chat or Claude code. The goal is to have:
 - Minimal token usage
 - A lightweight CLI for quick questions with or without files
 
+## Usage
+
 ```
 Usage: ask [OPTIONS] [FILES...] [PROMPT...]
 
@@ -35,4 +37,6 @@ Examples:
   make 2>&1 | ask "Why this error?"
 ```
 
-When Claude's response contains code blocks (marked with ```), the tool automatically creates temporary files in your system's temp directory. You can then copy these files to your project as needed.
+## Temporary files
+
+When Claude's response contains code blocks (marked with ```), the tool automatically creates temporary files named `ask.code.N` (where N is the index of the code block) in your system's temp directory. The complete response is also saved as `ask.response`. You can then copy these files to your project as needed.
