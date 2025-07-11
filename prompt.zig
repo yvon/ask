@@ -12,33 +12,27 @@ pub fn buildPrompt(allocator: std.mem.Allocator, parsed_args: config.ParsedArgs)
     // Build prompt starting with file contents, then stdin content
     var prompt_builder = std.ArrayList(u8).init(allocator);
 
-    // Add file contents first
+    // Add file contents as proper diff
     for (parsed_args.input_files.items) |file_path| {
-        const file_content = std.fs.cwd().readFileAlloc(allocator, file_path, 1024 * 1024) catch |err| {
-            std.debug.print("Error reading file '{s}': {any}\n", .{ file_path, err });
+        const result = std.process.Child.run(.{
+            .allocator = allocator,
+            .argv = &[_][]const u8{ "diff", "-u", "/dev/null", file_path },
+        }) catch |err| {
+            std.debug.print("Error running diff for file '{s}': {any}\n", .{ file_path, err });
             std.process.exit(1);
         };
 
-        if (prompt_builder.items.len > 0) {
-            try prompt_builder.appendSlice("\n\n");
-        }
-
-        try prompt_builder.appendSlice("`");
-        try prompt_builder.appendSlice(file_path);
-        try prompt_builder.appendSlice("`:\n```");
-        try prompt_builder.appendSlice(file_content);
-        try prompt_builder.appendSlice("```\n");
+        const writer = prompt_builder.writer();
+        try writer.print("```diff\n{s}```\n", .{result.stdout});
     }
 
     if (stdin_content.len > 0) {
-        if (prompt_builder.items.len > 0) {
-            try prompt_builder.appendSlice("\n\n");
-        }
         try prompt_builder.appendSlice(stdin_content);
+        try prompt_builder.appendSlice("\n");
     }
 
     for (parsed_args.prompt_args.items, 0..) |arg, idx| {
-        if (prompt_builder.items.len > 0 or idx > 0) {
+        if (idx > 0) {
             try prompt_builder.append(' ');
         }
         try prompt_builder.appendSlice(arg);

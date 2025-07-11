@@ -37,6 +37,8 @@ Examples:
   make 2>&1 | ask "Why this error?"
 ```
 
-## Temporary files
+## Response handling
 
-When Claude's response contains code blocks (marked with ```), the tool automatically creates temporary files named `ask.code.N` (where N is the index of the code block) in your system's temp directory. The complete response is also saved as `ask.response`. You can then copy these files to your project as needed.
+The complete response is saved as `ask.response` in your system's temp directory.
+
+**Important**: If the LLM response contains diff blocks, they will be automatically applied to files in the current directory. Git usage is highly recommended to track and review changes before they are applied.

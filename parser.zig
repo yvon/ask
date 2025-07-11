@@ -2,48 +2,55 @@ const std = @import("std");
 const temp = @import("temp.zig");
 
 pub fn parseMarkdownAndCreateTempFiles(allocator: std.mem.Allocator, content: []const u8) !void {
-    var code_block_count: u32 = 0;
     var lines = std.mem.splitScalar(u8, content, '\n');
-    var in_code_block = false;
-    var code_lines = std.ArrayList([]const u8).init(allocator);
+    var in_diff_block = false;
+    var diff_lines = std.ArrayList([]const u8).init(allocator);
 
     // Create file for whole response
     try createWholeResponseFile(allocator, content);
 
     while (lines.next()) |line| {
-        const trimmed_line = std.mem.trim(u8, line, " \t\r");
+        if (std.mem.startsWith(u8, line, "```diff")) {
+            in_diff_block = true;
+            diff_lines.clearRetainingCapacity();
+        } else if (in_diff_block and std.mem.startsWith(u8, line, "```")) {
+            in_diff_block = false;
 
-        if (std.mem.startsWith(u8, trimmed_line, "```")) {
-            if (!in_code_block) {
-                in_code_block = true;
-                code_lines.clearRetainingCapacity();
-            } else {
-                in_code_block = false;
-
-                if (code_lines.items.len > 0) {
-                    code_block_count += 1;
-
-                    var code_content = std.ArrayList(u8).init(allocator);
-
-                    for (code_lines.items, 0..) |code_line, idx| {
-                        try code_content.appendSlice(code_line);
-                        if (idx < code_lines.items.len - 1) {
-                            try code_content.append('\n');
-                        }
-                    }
-
-                    try createTempFile(allocator, code_content.items, code_block_count);
-                }
+            if (diff_lines.items.len > 0) {
+                const diff_content = try std.mem.join(allocator, "\n", diff_lines.items);
+                try applyDiffPatch(diff_content);
             }
-        } else if (in_code_block) {
-            try code_lines.append(line);
+        } else if (in_diff_block) {
+            try diff_lines.append(line);
         }
     }
 }
 
-fn createTempFile(allocator: std.mem.Allocator, content: []const u8, count: u32) !void {
-    const filename = try std.fmt.allocPrint(allocator, "ask.code.{d}", .{count});
-    try temp.writeTempFile(allocator, content, filename);
+fn applyDiffPatch(diff_content: []const u8) !void {
+    var process = std.process.Child.init(&[_][]const u8{"patch"}, std.heap.page_allocator);
+    process.stdin_behavior = .Pipe;
+
+    try process.spawn();
+
+    if (process.stdin) |stdin| {
+        try stdin.writeAll(diff_content);
+        try stdin.writeAll("\n");
+        stdin.close();
+        process.stdin = null;
+    }
+
+    const result = try process.wait();
+
+    switch (result) {
+        .Exited => |code| {
+            if (code != 0) {
+                std.debug.print("patch command failed with exit code: {}\n", .{code});
+            }
+        },
+        else => {
+            std.debug.print("patch command failed\n", .{});
+        },
+    }
 }
 
 fn createWholeResponseFile(allocator: std.mem.Allocator, content: []const u8) !void {

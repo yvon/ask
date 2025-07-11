@@ -13,7 +13,6 @@ pub fn main() !void {
     const parsed_args = try config.parseArgs(allocator);
     const built_prompt = try prompt.buildPrompt(allocator, parsed_args);
     const cfg = prompt.createConfig(parsed_args, built_prompt);
-    
     const request = try api.buildRequest(allocator, cfg);
     var req = try api.makeRequest(allocator, cfg, request);
     const response = try streaming.processStreamingResponse(allocator, &req);

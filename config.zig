@@ -1,5 +1,11 @@
 const std = @import("std");
 
+pub const OverrideFiles = enum {
+    ask,
+    yes,
+    no,
+};
+
 pub const Config = struct {
     max_tokens: u32 = 5000,
     temperature: f32 = 0.0,
@@ -8,6 +14,7 @@ pub const Config = struct {
     model: []const u8 = "claude-sonnet-4-20250514",
     prompt: []const u8,
     api_key: []const u8,
+    override_files: OverrideFiles = .ask,
 };
 
 pub const ParsedArgs = struct {
@@ -19,6 +26,7 @@ pub const ParsedArgs = struct {
     prompt_args: std.ArrayList([]const u8),
     input_files: std.ArrayList([]const u8),
     api_key: []const u8,
+    override_files: OverrideFiles = .ask,
 };
 
 const usage = @embedFile("usage.txt");
@@ -50,6 +58,7 @@ pub fn parseArgs(allocator: std.mem.Allocator) !ParsedArgs {
     var model: []const u8 = "claude-sonnet-4-20250514";
     var prompt_args = std.ArrayList([]const u8).init(allocator);
     var input_files = std.ArrayList([]const u8).init(allocator);
+    var override_files: OverrideFiles = .ask;
 
     var i: usize = 1;
     while (i < args.len) : (i += 1) {
@@ -74,6 +83,10 @@ pub fn parseArgs(allocator: std.mem.Allocator) !ParsedArgs {
         } else if (std.mem.eql(u8, args[i], "--model") and i + 1 < args.len) {
             model = args[i + 1];
             i += 1;
+        } else if (std.mem.eql(u8, args[i], "-y")) {
+            override_files = .yes;
+        } else if (std.mem.eql(u8, args[i], "-n")) {
+            override_files = .no;
         } else {
             // Check if the argument is a file that exists
             if (std.fs.cwd().access(args[i], .{})) {
@@ -100,5 +113,6 @@ pub fn parseArgs(allocator: std.mem.Allocator) !ParsedArgs {
         .prompt_args = prompt_args,
         .input_files = input_files,
         .api_key = api_key,
+        .override_files = override_files,
     };
 }
