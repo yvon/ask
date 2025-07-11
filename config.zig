@@ -96,8 +96,9 @@ pub fn parseArgs(allocator: std.mem.Allocator) !Config {
 
         try prompt_builder.appendSlice("`");
         try prompt_builder.appendSlice(file_path);
-        try prompt_builder.appendSlice("`:\n");
+        try prompt_builder.appendSlice("`:\n```");
         try prompt_builder.appendSlice(file_content);
+        try prompt_builder.appendSlice("```\n");
     }
 
     if (stdin_content.len > 0) {
