@@ -9,13 +9,16 @@ I wanted something simpler than aider.chat or Claude code. The goal is to have:
 
 ## Usage
 
+```
 Usage: ask [OPTIONS] [FILES...] [PROMPT...]
 
 Ask questions to Claude AI via the Anthropic API.
 
 The complete response is saved as ask.response in your system's temp directory.
 
-Important: If the LLM response contains diff blocks, they will be automatically applied to files in the current directory. Git usage is highly recommended to track and review changes before they are applied.
+Important: If the LLM response contains diff blocks, they will be automatically
+applied to files in the current directory. Git usage is highly recommended to
+track and review changes before they are applied.
 
 Arguments:
   FILES...     Input files to include in the prompt
@@ -38,3 +41,4 @@ Examples:
   echo "Hello world" | ask "Translate to Spanish"
   ask --temperature 0.7 --max-tokens 1000 "Write a poem"
   make 2>&1 | ask "Why this error?"
+```
