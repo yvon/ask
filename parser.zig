@@ -6,7 +6,6 @@ pub fn parseMarkdownAndCreateTempFiles(allocator: std.mem.Allocator, content: []
     var lines = std.mem.splitScalar(u8, content, '\n');
     var in_code_block = false;
     var code_lines = std.ArrayList([]const u8).init(allocator);
-    defer code_lines.deinit();
 
     // Create file for whole response
     try createWholeResponseFile(allocator, content);
@@ -25,7 +24,6 @@ pub fn parseMarkdownAndCreateTempFiles(allocator: std.mem.Allocator, content: []
                     code_block_count += 1;
 
                     var code_content = std.ArrayList(u8).init(allocator);
-                    defer code_content.deinit();
 
                     for (code_lines.items, 0..) |code_line, idx| {
                         try code_content.appendSlice(code_line);
@@ -45,13 +43,10 @@ pub fn parseMarkdownAndCreateTempFiles(allocator: std.mem.Allocator, content: []
 
 fn createTempFile(allocator: std.mem.Allocator, content: []const u8, count: u32) !void {
     const filename = try std.fmt.allocPrint(allocator, "ask.code.{d}", .{count});
-    defer allocator.free(filename);
 
     const tmp_dir_path = try temp.getTempDir(allocator);
-    defer allocator.free(tmp_dir_path);
 
     const full_path = try std.fs.path.join(allocator, &[_][]const u8{ tmp_dir_path, filename });
-    defer allocator.free(full_path);
 
     const file = std.fs.createFileAbsolute(full_path, .{}) catch |err| {
         std.debug.print("Failed to create temp file {s}: {}\n", .{ full_path, err });
@@ -71,10 +66,8 @@ fn createWholeResponseFile(allocator: std.mem.Allocator, content: []const u8) !v
     const filename = "ask.response";
 
     const tmp_dir_path = try temp.getTempDir(allocator);
-    defer allocator.free(tmp_dir_path);
 
     const full_path = try std.fs.path.join(allocator, &[_][]const u8{ tmp_dir_path, filename });
-    defer allocator.free(full_path);
 
     const file = std.fs.createFileAbsolute(full_path, .{}) catch |err| {
         std.debug.print("Failed to create response file {s}: {}\n", .{ full_path, err });
