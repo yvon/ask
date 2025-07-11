@@ -1,5 +1,5 @@
 const std = @import("std");
-const temp = @import("tmp_dir.zig");
+const temp = @import("temp.zig");
 
 pub fn parseMarkdownAndCreateTempFiles(allocator: std.mem.Allocator, content: []const u8) !void {
     var code_block_count: u32 = 0;
@@ -43,42 +43,10 @@ pub fn parseMarkdownAndCreateTempFiles(allocator: std.mem.Allocator, content: []
 
 fn createTempFile(allocator: std.mem.Allocator, content: []const u8, count: u32) !void {
     const filename = try std.fmt.allocPrint(allocator, "ask.code.{d}", .{count});
-
-    const tmp_dir_path = try temp.getTempDir(allocator);
-
-    const full_path = try std.fs.path.join(allocator, &[_][]const u8{ tmp_dir_path, filename });
-
-    const file = std.fs.createFileAbsolute(full_path, .{}) catch |err| {
-        std.debug.print("Failed to create temp file {s}: {}\n", .{ full_path, err });
-        return;
-    };
-    defer file.close();
-
-    file.writeAll(content) catch |err| {
-        std.debug.print("Failed to write to temp file {s}: {}\n", .{ full_path, err });
-        return;
-    };
-
-    std.debug.print("Extracted code: {s}\n", .{full_path});
+    try temp.writeTempFile(allocator, content, filename);
 }
 
 fn createWholeResponseFile(allocator: std.mem.Allocator, content: []const u8) !void {
     const filename = "ask.response";
-
-    const tmp_dir_path = try temp.getTempDir(allocator);
-
-    const full_path = try std.fs.path.join(allocator, &[_][]const u8{ tmp_dir_path, filename });
-
-    const file = std.fs.createFileAbsolute(full_path, .{}) catch |err| {
-        std.debug.print("Failed to create response file {s}: {}\n", .{ full_path, err });
-        return;
-    };
-    defer file.close();
-
-    file.writeAll(content) catch |err| {
-        std.debug.print("Failed to write to response file {s}: {}\n", .{ full_path, err });
-        return;
-    };
-
-    std.debug.print("---\nClaude's response saved in file: {s}\n", .{full_path});
+    try temp.writeTempFile(allocator, content, filename);
 }

@@ -27,3 +27,21 @@ pub fn getTempDir(allocator: std.mem.Allocator) ![]u8 {
         else => return err,
     }
 }
+
+pub fn writeTempFile(allocator: std.mem.Allocator, content: []const u8, filename: []const u8) !void {
+    const tmp_dir_path = try getTempDir(allocator);
+
+    const full_path = try std.fs.path.join(allocator, &[_][]const u8{ tmp_dir_path, filename });
+
+    const file = std.fs.createFileAbsolute(full_path, .{}) catch |err| {
+        std.debug.print("Failed to create temp file {s}: {}\n", .{ full_path, err });
+        return;
+    };
+
+    defer file.close();
+
+    file.writeAll(content) catch |err| {
+        std.debug.print("Failed to write to temp file {s}: {}\n", .{ full_path, err });
+        return;
+    };
+}
