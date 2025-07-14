@@ -10,11 +10,10 @@ pub fn main() !void {
 
     const allocator = arena.allocator();
     const args = try std.process.argsAlloc(allocator);
-    const writer = std.io.getStdOut().writer();
 
     if (args.len > 1 and std.mem.eql(u8, args[1], "prompt")) {
         const content = try prompt.build(allocator, args[2..]);
-        try writer.writeAll(content);
+        try std.io.getStdOut().writer().writeAll(content);
         std.process.exit(0);
     }
 
@@ -24,9 +23,29 @@ pub fn main() !void {
     var response = try api.makeRequest(allocator, request);
     var iterator = try streaming.Iterator.init(allocator, &response);
 
+    const pager = std.process.getEnvVarOwned(allocator, "PAGER") catch "less";
+
+    var pager_args = std.ArrayList([]const u8).init(allocator);
+    var token_iter = std.mem.tokenizeScalar(u8, pager, ' ');
+    while (token_iter.next()) |token| {
+        try pager_args.append(token);
+    }
+    var child = std.process.Child.init(pager_args.items, allocator);
+
+    child.stdin_behavior = .Pipe;
+    child.stdout_behavior = .Inherit;
+    child.stderr_behavior = .Inherit;
+
+    try child.spawn();
+    const stdin = child.stdin.?;
+
     while (try iterator.next()) |data| {
-        _ = try writer.write(data);
+        try stdin.writeAll(data);
     }
 
-    try writer.writeAll("\n");
+    try stdin.writeAll("\n");
+    stdin.close();
+    child.stdin = null;
+
+    _ = try child.wait();
 }

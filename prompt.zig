@@ -4,6 +4,7 @@ const c = @cImport({
     @cInclude("stdlib.h");
     @cInclude("stdio.h");
     @cInclude("readline/readline.h");
+    @cInclude("readline/history.h");
 });
 
 fn readAllStdin(allocator: std.mem.Allocator, writer: anytype) !void {
@@ -17,14 +18,38 @@ fn readLine(writer: anytype) !void {
     const line = c.readline("> ");
 
     if (line == null) {
-        return error.ReadLineError;
+        std.process.exit(0);
     }
 
     defer c.free(line);
+
+    if (std.mem.len(line) > 0) {
+        _ = c.add_history(line);
+    }
+
     try writer.print("{s}\n", .{line});
 }
 
+fn initHistory(allocator: std.mem.Allocator) void {
+    const home = std.process.getEnvVarOwned(allocator, "HOME") catch return;
+    const history_path = std.fmt.allocPrint(allocator, "{s}/.ask_history", .{home}) catch return;
+    defer allocator.free(history_path);
+
+    _ = c.read_history(history_path.ptr);
+}
+
+fn saveHistory(allocator: std.mem.Allocator) void {
+    const home = std.process.getEnvVarOwned(allocator, "HOME") catch return;
+    const history_path = std.fmt.allocPrint(allocator, "{s}/.ask_history", .{home}) catch return;
+    defer allocator.free(history_path);
+
+    _ = c.write_history(history_path.ptr);
+}
+
 pub fn build(allocator: std.mem.Allocator, args: []const []const u8) ![]const u8 {
+    initHistory(allocator);
+    defer saveHistory(allocator);
+
     var files = try std.ArrayList([]const u8).initCapacity(allocator, args.len);
     var words = try std.ArrayList([]const u8).initCapacity(allocator, args.len);
     var prompt = std.ArrayList(u8).init(allocator);
