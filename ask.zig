@@ -14,7 +14,7 @@ pub fn main() !void {
 
     if (args.len > 1 and std.mem.eql(u8, args[1], "prompt")) {
         const content = try prompt.build(allocator, args[2..]);
-        try writer.print("{s}\n", .{content});
+        try writer.writeAll(content);
         std.process.exit(0);
     }
 

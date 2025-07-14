@@ -1,6 +1,6 @@
 # Default target for current platform
 build:
-	zig build-exe ask.zig
+	zig build-exe ask.zig -lc -lreadline
 
 release:
 	zig build-exe -O ReleaseSmall -fstrip -fsingle-threaded ask.zig

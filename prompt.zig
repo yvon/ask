@@ -1,5 +1,29 @@
 const std = @import("std");
 
+const c = @cImport({
+    @cInclude("stdlib.h");
+    @cInclude("stdio.h");
+    @cInclude("readline/readline.h");
+});
+
+fn readAllStdin(allocator: std.mem.Allocator, writer: anytype) !void {
+    const stdin = std.io.getStdIn().reader();
+    const content = try stdin.readAllAlloc(allocator, 1024 * 1024);
+    defer allocator.free(content);
+    try writer.writeAll(content);
+}
+
+fn readLine(writer: anytype) !void {
+    const line = c.readline("> ");
+
+    if (line == null) {
+        return error.ReadLineError;
+    }
+
+    defer c.free(line);
+    try writer.print("{s}\n", .{line});
+}
+
 pub fn build(allocator: std.mem.Allocator, args: []const []const u8) ![]const u8 {
     var files = try std.ArrayList([]const u8).initCapacity(allocator, args.len);
     var words = try std.ArrayList([]const u8).initCapacity(allocator, args.len);
@@ -28,17 +52,16 @@ pub fn build(allocator: std.mem.Allocator, args: []const []const u8) ![]const u8
 
     const is_tty = std.io.getStdIn().isTty();
 
-    if (!is_tty or words.items.len == 0) {
-        std.debug.print("is_tty: {any}\n", .{is_tty});
-        if (is_tty) {
-            try std.io.getStdOut().writer().writeAll("> ");
-        }
-        const stdin = std.io.getStdIn().reader();
-        const content = try stdin.readAllAlloc(allocator, 1024 * 1024);
-        try writer.writeAll(content);
+    if (!is_tty) {
+        try readAllStdin(allocator, writer);
+    } else if (words.items.len == 0) {
+        try readLine(writer);
     }
 
-    const sentence = try std.mem.join(allocator, " ", words.items);
-    try prompt.appendSlice(sentence);
+    if (words.items.len > 0) {
+        const sentence = try std.mem.join(allocator, " ", words.items);
+        try prompt.appendSlice(sentence);
+    }
+
     return prompt.items;
 }
