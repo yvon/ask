@@ -1,61 +1,44 @@
 const std = @import("std");
-const config = @import("config.zig");
 
-pub fn buildPrompt(allocator: std.mem.Allocator, parsed_args: config.ParsedArgs) ![]const u8 {
-    // Read from stdin only if data is available
-    var stdin_content: []const u8 = "";
-    if (std.io.getStdIn().isTty() == false) {
-        const stdin = std.io.getStdIn().reader();
-        stdin_content = stdin.readAllAlloc(allocator, 1024 * 1024) catch "";
+pub fn build(allocator: std.mem.Allocator, args: []const []const u8) ![]const u8 {
+    var files = try std.ArrayList([]const u8).initCapacity(allocator, args.len);
+    var words = try std.ArrayList([]const u8).initCapacity(allocator, args.len);
+    var prompt = std.ArrayList(u8).init(allocator);
+    const writer = prompt.writer();
+
+    for (args) |arg| {
+        if (std.fs.cwd().access(arg, .{})) {
+            try files.append(arg);
+        } else |_| {
+            try words.append(arg);
+        }
     }
 
-    // Build prompt starting with file contents, then stdin content
-    var prompt_builder = std.ArrayList(u8).init(allocator);
-
-    // Add file contents as proper diff
-    for (parsed_args.input_files.items) |file_path| {
+    for (files.items) |file| {
         const result = std.process.Child.run(.{
             .allocator = allocator,
-            .argv = &[_][]const u8{ "diff", "-u", "/dev/null", file_path },
+            .argv = &[_][]const u8{ "git", "diff", "--no-index", "/dev/null", file },
         }) catch |err| {
-            std.debug.print("Error running diff for file '{s}': {any}\n", .{ file_path, err });
-            std.process.exit(1);
+            std.debug.print("Error running diff for file '{s}': {any}\n", .{ file, err });
+            continue;
         };
 
-        const writer = prompt_builder.writer();
         try writer.print("```diff\n{s}```\n", .{result.stdout});
     }
 
-    if (stdin_content.len > 0) {
-        try prompt_builder.appendSlice(stdin_content);
-        try prompt_builder.appendSlice("\n");
-    }
+    const is_tty = std.io.getStdIn().isTty();
 
-    for (parsed_args.prompt_args.items, 0..) |arg, idx| {
-        if (idx > 0) {
-            try prompt_builder.append(' ');
+    if (!is_tty or words.items.len == 0) {
+        std.debug.print("is_tty: {any}\n", .{is_tty});
+        if (is_tty) {
+            try std.io.getStdOut().writer().writeAll("> ");
         }
-        try prompt_builder.appendSlice(arg);
+        const stdin = std.io.getStdIn().reader();
+        const content = try stdin.readAllAlloc(allocator, 1024 * 1024);
+        try writer.writeAll(content);
     }
 
-    const final_prompt = prompt_builder.items;
-
-    if (final_prompt.len == 0) {
-        std.debug.print("Error: No prompt provided via arguments or stdin\n\n", .{});
-        std.process.exit(1);
-    }
-
-    return final_prompt;
-}
-
-pub fn createConfig(parsed_args: config.ParsedArgs, prompt: []const u8) config.Config {
-    return config.Config{
-        .max_tokens = parsed_args.max_tokens,
-        .temperature = parsed_args.temperature,
-        .prefill = parsed_args.prefill,
-        .system = parsed_args.system,
-        .model = parsed_args.model,
-        .prompt = prompt,
-        .api_key = parsed_args.api_key,
-    };
+    const sentence = try std.mem.join(allocator, " ", words.items);
+    try prompt.appendSlice(sentence);
+    return prompt.items;
 }

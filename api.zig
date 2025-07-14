@@ -1,7 +1,7 @@
 const std = @import("std");
 const http = std.http;
 const json = std.json;
-const config = @import("config.zig");
+const cli = @import("cli.zig");
 const temp = @import("temp.zig");
 
 pub const Message = struct {
@@ -18,9 +18,9 @@ pub const Request = struct {
     stream: bool = true,
 };
 
-pub fn buildRequest(allocator: std.mem.Allocator, cfg: config.Config) !Request {
+pub fn buildRequest(allocator: std.mem.Allocator, cfg: cli.Config, prompt: []const u8) !Request {
     var messages = std.ArrayList(Message).init(allocator);
-    try messages.append(Message{ .role = "user", .content = cfg.prompt });
+    try messages.append(Message{ .role = "user", .content = prompt });
 
     if (cfg.prefill) |prefill_content| {
         try messages.append(Message{ .role = "assistant", .content = prefill_content });
@@ -36,7 +36,7 @@ pub fn buildRequest(allocator: std.mem.Allocator, cfg: config.Config) !Request {
     };
 }
 
-pub fn makeRequest(allocator: std.mem.Allocator, cfg: config.Config, request: Request) !http.Client.Request {
+pub fn makeRequest(allocator: std.mem.Allocator, request: Request) !http.Client.Request {
     // Allocate reusable buffer
     const buffer = try allocator.alloc(u8, 1024 * 1024);
 
@@ -50,7 +50,8 @@ pub fn makeRequest(allocator: std.mem.Allocator, cfg: config.Config, request: Re
     // Make HTTP request
     var client = http.Client{ .allocator = allocator };
     const uri = try std.Uri.parse("https://api.anthropic.com/v1/messages");
-    const auth_header = try std.fmt.allocPrint(allocator, "Bearer {s}", .{cfg.api_key});
+    const api_key = apiKey(allocator);
+    const auth_header = try std.fmt.allocPrint(allocator, "Bearer {s}", .{api_key});
 
     var req = try client.open(.POST, uri, .{
         .server_header_buffer = try allocator.alloc(u8, 4096),
@@ -60,7 +61,7 @@ pub fn makeRequest(allocator: std.mem.Allocator, cfg: config.Config, request: Re
         },
         .extra_headers = &.{
             .{ .name = "anthropic-version", .value = "2023-06-01" },
-            .{ .name = "x-api-key", .value = cfg.api_key },
+            .{ .name = "x-api-key", .value = api_key },
         },
     });
 
@@ -71,4 +72,12 @@ pub fn makeRequest(allocator: std.mem.Allocator, cfg: config.Config, request: Re
     try req.wait();
 
     return req;
+}
+
+fn apiKey(allocator: std.mem.Allocator) []const u8 {
+    return std.process.getEnvVarOwned(allocator, "ANTHROPIC_API_KEY") catch |err| {
+        std.debug.print("Error: ANTHROPIC_API_KEY not found: {any}\n", .{err});
+        std.debug.print("Please set your Anthropic API key as an environment variable.\n", .{});
+        std.process.exit(1);
+    };
 }
