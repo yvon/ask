@@ -31,6 +31,7 @@ Options:
 
 Environment Variables:
   ANTHROPIC_API_KEY        Required API key for Anthropic
+  PAGER                    Pager for output (default: less, set to 'cat' to disable)
 
 Examples:
   ask "Why do people like Zig?"
