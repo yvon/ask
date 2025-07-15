@@ -1,10 +1,13 @@
 const std = @import("std");
+const cli = @import("cli.zig");
 
 const c = @cImport({
-    @cInclude("stdlib.h");
-    @cInclude("stdio.h");
+    @cInclude("stdlib.h"); // free
+    @cInclude("stdio.h"); // readline
     @cInclude("readline/readline.h");
     @cInclude("readline/history.h");
+    @cInclude("unistd.h"); // open(), close(), dup2()
+    @cInclude("fcntl.h"); // O_RDWR
 });
 
 fn readAllStdin(allocator: std.mem.Allocator, writer: anytype) !void {
@@ -15,6 +18,16 @@ fn readAllStdin(allocator: std.mem.Allocator, writer: anytype) !void {
 }
 
 fn readLine(writer: anytype) !void {
+    const tty_fd = c.open("/dev/tty", c.O_RDWR);
+    if (tty_fd == -1) {
+        std.debug.print("Error opening /dev/tty\n", .{});
+        return;
+    }
+    defer _ = c.close(tty_fd);
+
+    // Redirect stdin to tty for readline
+    _ = c.dup2(tty_fd, c.STDIN_FILENO);
+
     const line = c.readline("> ");
 
     if (line == null) {
@@ -46,7 +59,7 @@ fn saveHistory(allocator: std.mem.Allocator) void {
     _ = c.write_history(history_path.ptr);
 }
 
-pub fn build(allocator: std.mem.Allocator, args: []const []const u8) ![]const u8 {
+pub fn build(allocator: std.mem.Allocator, config: cli.Config, args: []const []const u8) ![]const u8 {
     initHistory(allocator);
     defer saveHistory(allocator);
 
@@ -79,7 +92,9 @@ pub fn build(allocator: std.mem.Allocator, args: []const []const u8) ![]const u8
 
     if (!is_tty) {
         try readAllStdin(allocator, writer);
-    } else if (words.items.len == 0) {
+    }
+
+    if (config.interactive or is_tty and words.items.len == 0) {
         try readLine(writer);
     }
 

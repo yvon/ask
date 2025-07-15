@@ -8,6 +8,7 @@ pub const Config = struct {
     system: ?[]const u8 = null,
     model: []const u8 = "claude-sonnet-4-20250514",
     positional: []const []const u8 = &.{},
+    interactive: bool = false,
 };
 
 pub fn parse(allocator: std.mem.Allocator, args: []const []const u8) Config {
@@ -18,9 +19,11 @@ pub fn parse(allocator: std.mem.Allocator, args: []const []const u8) Config {
     while (i < args.len) : (i += 1) {
         const arg = args[i];
 
-        if (std.mem.eql(u8, arg, "--help") or std.mem.eql(u8, arg, "-h")) {
+        if (eql(arg, "--help") or eql(arg, "-h")) {
             printUsage();
             std.process.exit(0);
+        } else if (eql(arg, "-i")) {
+            config.interactive = true;
         } else if (int(args, "--max-tokens", &i)) |value| {
             config.max_tokens = value;
         } else if (float(args, "--temperature", &i)) |value| {
@@ -53,8 +56,12 @@ fn printUsage() void {
     std.process.exit(0);
 }
 
+fn eql(arg: []const u8, name: []const u8) bool {
+    return std.mem.eql(u8, arg, name);
+}
+
 fn string(args: []const []const u8, name: []const u8, i: *usize) ?[]const u8 {
-    if (!std.mem.eql(u8, args[i.*], name)) {
+    if (!eql(args[i.*], name)) {
         return null;
     }
 

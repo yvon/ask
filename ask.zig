@@ -10,15 +10,15 @@ pub fn main() !void {
     defer arena.deinit();
     const allocator = arena.allocator();
     const args = try std.process.argsAlloc(allocator);
+    const config = cli.parse(allocator, args[1..]);
 
-    if (args.len > 1 and std.mem.eql(u8, args[1], "prompt")) {
-        const content = try prompt.build(allocator, args[2..]);
+    if (config.positional.len > 0 and std.mem.eql(u8, config.positional[0], "prompt")) {
+        const content = try prompt.build(allocator, config, config.positional[1..]);
         try std.io.getStdOut().writeAll(content);
         std.process.exit(0);
     }
 
-    const config = cli.parse(allocator, args[1..]);
-    const content = try prompt.build(allocator, config.positional);
+    const content = try prompt.build(allocator, config, config.positional);
     const request = try api.buildRequest(allocator, config, content);
     var response = try api.makeRequest(allocator, request);
     var iterator = try streaming.Iterator.init(allocator, &response);
