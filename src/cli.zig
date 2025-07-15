@@ -34,6 +34,9 @@ pub fn parse(allocator: std.mem.Allocator, args: []const []const u8) Config {
             config.system = value;
         } else if (string(args, "--model", &i)) |value| {
             config.model = value;
+        } else if (eql(arg, "--diff") or eql(arg, "-d")) {
+            // --diff takes precedence over --prefill
+            config.prefill = "diff --git";
         } else {
             if (arg[0] == '-') {
                 fail("Invalid argument: {s}\n", .{arg});
