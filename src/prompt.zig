@@ -24,22 +24,16 @@ fn readLine(writer: anytype) !void {
         return;
     }
     defer _ = c.close(tty_fd);
-
     // Redirect stdin to tty for readline
     _ = c.dup2(tty_fd, c.STDIN_FILENO);
-
     const line = c.readline("> ");
-
     if (line == null) {
         std.process.exit(0);
     }
-
     defer c.free(line);
-
     if (std.mem.len(line) > 0) {
         _ = c.add_history(line);
     }
-
     try writer.print("{s}\n", .{line});
 }
 

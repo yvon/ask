@@ -1,13 +1,16 @@
 FLAGS=-lc -lreadline
+SRC=src/ask.zig
 
-build:
-	zig build-exe ask.zig $(FLAGS)
+all: ask README.md
+
+ask: src/*.zig
+	zig build-exe $(FLAGS) $(SRC)
 
 release:
-	zig build-exe -O ReleaseSmall -fstrip -fsingle-threaded $(FLAGS) ask.zig
+	zig build-exe -O ReleaseSmall -fstrip -fsingle-threaded $(FLAGS) $(SRC)
 
 install:
 	cp ask ~/.local/bin
 
-README.md: README.sh usage.txt
-	sh README.sh > README.md
+README.md: ./utils/generate_readme.sh src/usage.txt
+	sh ./utils/generate_readme.sh > README.md

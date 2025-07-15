@@ -19,5 +19,5 @@ A simple CLI tool to interact with Claude AI via the Anthropic API.
 ## Usage
 EOF
 echo '```'
-cat usage.txt
+cat ../src/usage.txt
 echo '```'
