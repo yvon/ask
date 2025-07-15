@@ -10,12 +10,10 @@ pub fn main() !void {
     defer arena.deinit();
     const allocator = arena.allocator();
     const args = try std.process.argsAlloc(allocator);
-    var output = pager.Output.init(allocator);
-    defer output.deinit();
 
     if (args.len > 1 and std.mem.eql(u8, args[1], "prompt")) {
         const content = try prompt.build(allocator, args[2..]);
-        try output.file.writeAll(content);
+        try std.io.getStdOut().writeAll(content);
         std.process.exit(0);
     }
 
@@ -24,6 +22,8 @@ pub fn main() !void {
     const request = try api.buildRequest(allocator, config, content);
     var response = try api.makeRequest(allocator, request);
     var iterator = try streaming.Iterator.init(allocator, &response);
+    var output = pager.Output.init(allocator);
+    defer output.deinit();
 
     while (try iterator.next()) |data| {
         try output.file.writeAll(data);
