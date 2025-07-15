@@ -22,7 +22,7 @@ pub fn parse(allocator: std.mem.Allocator, args: []const []const u8) Config {
         if (eql(arg, "--help") or eql(arg, "-h")) {
             printUsage();
             std.process.exit(0);
-        } else if (eql(arg, "-i")) {
+        } else if (eql(arg, "-")) {
             config.interactive = true;
         } else if (int(args, "--max-tokens", &i)) |value| {
             config.max_tokens = value;

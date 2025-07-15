@@ -60,9 +60,6 @@ fn saveHistory(allocator: std.mem.Allocator) void {
 }
 
 pub fn build(allocator: std.mem.Allocator, config: cli.Config, args: []const []const u8) ![]const u8 {
-    initHistory(allocator);
-    defer saveHistory(allocator);
-
     var files = try std.ArrayList([]const u8).initCapacity(allocator, args.len);
     var words = try std.ArrayList([]const u8).initCapacity(allocator, args.len);
     var prompt = std.ArrayList(u8).init(allocator);
@@ -95,6 +92,8 @@ pub fn build(allocator: std.mem.Allocator, config: cli.Config, args: []const []c
     }
 
     if (config.interactive or is_tty and words.items.len == 0) {
+        initHistory(allocator);
+        defer saveHistory(allocator);
         try readLine(writer);
     }
 

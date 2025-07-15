@@ -8,3 +8,6 @@ release:
 
 install:
 	cp ask ~/.local/bin
+
+README.md: README.sh usage.txt
+	sh README.sh > README.md
