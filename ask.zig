@@ -3,17 +3,19 @@ const cli = @import("cli.zig");
 const prompt = @import("prompt.zig");
 const api = @import("api.zig");
 const streaming = @import("streaming.zig");
+const pager = @import("pager.zig");
 
 pub fn main() !void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
-
     const allocator = arena.allocator();
     const args = try std.process.argsAlloc(allocator);
+    var output = pager.Output.init(allocator);
+    defer output.deinit();
 
     if (args.len > 1 and std.mem.eql(u8, args[1], "prompt")) {
         const content = try prompt.build(allocator, args[2..]);
-        try std.io.getStdOut().writer().writeAll(content);
+        try output.file.writeAll(content);
         std.process.exit(0);
     }
 
@@ -23,29 +25,9 @@ pub fn main() !void {
     var response = try api.makeRequest(allocator, request);
     var iterator = try streaming.Iterator.init(allocator, &response);
 
-    const pager = std.process.getEnvVarOwned(allocator, "PAGER") catch "less";
-
-    var pager_args = std.ArrayList([]const u8).init(allocator);
-    var token_iter = std.mem.tokenizeScalar(u8, pager, ' ');
-    while (token_iter.next()) |token| {
-        try pager_args.append(token);
-    }
-    var child = std.process.Child.init(pager_args.items, allocator);
-
-    child.stdin_behavior = .Pipe;
-    child.stdout_behavior = .Inherit;
-    child.stderr_behavior = .Inherit;
-
-    try child.spawn();
-    const stdin = child.stdin.?;
-
     while (try iterator.next()) |data| {
-        try stdin.writeAll(data);
+        try output.file.writeAll(data);
     }
 
-    try stdin.writeAll("\n");
-    stdin.close();
-    child.stdin = null;
-
-    _ = try child.wait();
+    try output.file.writeAll("\n");
 }
