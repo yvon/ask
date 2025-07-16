@@ -28,7 +28,6 @@ Options:
   --model <name>           Model to use (default: claude-sonnet-4-20250514)
   --diff, -d               Generate a git patch (equivalent to --prefill "diff --git")
   --apply, -a              Apply the generated patch (implies --diff)
-  -                        Force interactive mode (prompt from terminal)
   -h, --help               Show this help message
 
 Environment Variables:

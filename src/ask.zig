@@ -9,8 +9,12 @@ pub fn main() !void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
     const allocator = arena.allocator();
+
+    // Parse command line arguments
     const args = try std.process.argsAlloc(allocator);
     const config = cli.parse(allocator, args[1..]);
+
+    // Build the prompt
     const content = try prompt.build(allocator, config);
 
     if (config.debug_prompt) {
@@ -18,10 +22,12 @@ pub fn main() !void {
         std.process.exit(0);
     }
 
+    // Request LLM
     const request = try api.buildRequest(allocator, config, content);
     var response = try api.makeRequest(allocator, request);
     var iterator = try streaming.Iterator.init(allocator, &response);
 
+    // Spawn child processes (pager, git apply)
     var pipe_manager = PipeManager.init(allocator);
     defer pipe_manager.deinit();
     defer pipe_manager.closeAllStdin();
@@ -30,6 +36,10 @@ pub fn main() !void {
         try pipe_manager.addProcess(&.{ "git", "apply", "-" });
     }
 
+    // Write output
+    if (config.prefill) |prefill| {
+        try pipe_manager.writeToAll(prefill);
+    }
     while (try iterator.next()) |data| {
         try pipe_manager.writeToAll(data);
     }
