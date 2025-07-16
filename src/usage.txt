@@ -22,9 +22,7 @@ Environment Variables:
   PAGER                    Pager for output (default: less, set to 'cat' to disable)
 
 Examples:
-  ask "Why do people like Zig?"
-  ask main.c "Comment the main function"
-  echo "Hello world" | ask "Translate to Spanish"
-  ask --temperature 0.7 --max-tokens 1000 "Write a poem"
-  make 2>&1 | ask "Why this error?"
+  ask "who created Zig language?"
+  ask main.c "extract parsing to dedicated function"
+  make 2>&1 | ask "why this error?"
   ask - < data

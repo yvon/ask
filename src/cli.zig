@@ -10,6 +10,7 @@ pub const Config = struct {
     positional: []const []const u8 = &.{},
     interactive: bool = false,
     apply: bool = false,
+    debug_prompt: bool = false,
 };
 
 pub fn parse(allocator: std.mem.Allocator, args: []const []const u8) Config {
@@ -41,6 +42,8 @@ pub fn parse(allocator: std.mem.Allocator, args: []const []const u8) Config {
         } else if (eql(arg, "--apply") or eql(arg, "-a")) {
             config.prefill = "diff --git";
             config.apply = true;
+        } else if (eql(arg, "--debug-prompt")) {
+            config.debug_prompt = true;
         } else {
             if (arg[0] == '-') {
                 fail("Invalid argument: {s}\n", .{arg});

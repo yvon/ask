@@ -53,7 +53,8 @@ fn saveHistory(allocator: std.mem.Allocator) void {
     _ = c.write_history(history_path.ptr);
 }
 
-pub fn build(allocator: std.mem.Allocator, config: cli.Config, args: []const []const u8) ![]const u8 {
+pub fn build(allocator: std.mem.Allocator, config: cli.Config) ![]const u8 {
+    const args = config.positional;
     var files = try std.ArrayList([]const u8).initCapacity(allocator, args.len);
     var words = try std.ArrayList([]const u8).initCapacity(allocator, args.len);
     var prompt = std.ArrayList(u8).init(allocator);
