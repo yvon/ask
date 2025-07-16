@@ -40,3 +40,7 @@ Examples:
   make 2>&1 | ask "why this error?"
   ask - < data
 ```
+
+---
+
+Most of the code in this project has been written by hand. What was not has been carefully read and validated.

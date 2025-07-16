@@ -21,3 +21,9 @@ EOF
 echo '```'
 cat ../src/usage.txt
 echo '```'
+
+cat <<EOF
+
+---
+
+Most of the code in this project has been written by hand. What was not has been carefully read and validated.
