@@ -3,7 +3,7 @@ const cli = @import("cli.zig");
 const prompt = @import("prompt.zig");
 const api = @import("api.zig");
 const streaming = @import("streaming.zig");
-const PipeManager = @import("pipe_manager.zig").PipeManager;
+const pipe = @import("pipe.zig");
 
 pub fn main() !void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
@@ -28,7 +28,7 @@ pub fn main() !void {
     var iterator = try streaming.Iterator.init(allocator, &response);
 
     // Spawn child processes (pager, git apply)
-    var pipe_manager = PipeManager.init(allocator);
+    var pipe_manager = pipe.Manager.init(allocator);
     defer pipe_manager.deinit();
     defer pipe_manager.closeAllStdin();
     try pipe_manager.addProcess(try pager_args(allocator));
