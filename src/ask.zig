@@ -22,11 +22,6 @@ pub fn main() !void {
         std.process.exit(0);
     }
 
-    // Request LLM
-    const request = try api.buildRequest(allocator, config, content);
-    var response = try api.makeRequest(allocator, request);
-    var iterator = try streaming.Iterator.init(allocator, &response);
-
     // Spawn child processes (pager, git apply)
     var pipe_manager = pipe.Manager.init(allocator);
     defer pipe_manager.deinit();
@@ -35,6 +30,11 @@ pub fn main() !void {
     if (config.apply) {
         try pipe_manager.addProcess(&.{ "git", "apply", "-" });
     }
+
+    // Request LLM
+    const request = try api.buildRequest(allocator, config, content);
+    var response = try api.makeRequest(allocator, request);
+    var iterator = try streaming.Iterator.init(allocator, &response);
 
     // Write output
     if (config.prefill) |prefill| {
