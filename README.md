@@ -26,7 +26,8 @@ Options:
   --prefill <text>         Text to prefill the assistant's response
   --system <text>          System message to set context
   --model <name>           Model to use (default: claude-sonnet-4-20250514)
-  --diff                   Generate a git patch (equivalent to --prefill "diff --git")
+  --diff, -d               Generate a git patch (equivalent to --prefill "diff --git")
+  --apply, -a              Apply the generated patch (implies --diff)
   -                        Force interactive mode (prompt from terminal)
   -h, --help               Show this help message
 

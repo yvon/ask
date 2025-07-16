@@ -6,6 +6,9 @@ all: ask README.md
 ask: src/*.zig
 	zig build-exe $(FLAGS) $(SRC)
 
+clean:
+	rm -f ask *.o
+
 release:
 	zig build-exe -O ReleaseSmall -fstrip -fsingle-threaded $(FLAGS) $(SRC)
 

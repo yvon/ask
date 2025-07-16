@@ -9,6 +9,7 @@ pub const Config = struct {
     model: []const u8 = "claude-sonnet-4-20250514",
     positional: []const []const u8 = &.{},
     interactive: bool = false,
+    apply: bool = false,
 };
 
 pub fn parse(allocator: std.mem.Allocator, args: []const []const u8) Config {
@@ -37,6 +38,9 @@ pub fn parse(allocator: std.mem.Allocator, args: []const []const u8) Config {
         } else if (eql(arg, "--diff") or eql(arg, "-d")) {
             // --diff takes precedence over --prefill
             config.prefill = "diff --git";
+        } else if (eql(arg, "--apply") or eql(arg, "-a")) {
+            config.prefill = "diff --git";
+            config.apply = true;
         } else {
             if (arg[0] == '-') {
                 fail("Invalid argument: {s}\n", .{arg});

@@ -2,7 +2,6 @@ const std = @import("std");
 const http = std.http;
 const json = std.json;
 const cli = @import("cli.zig");
-const temp = @import("temp.zig");
 
 pub const Message = struct {
     role: []const u8,
@@ -44,8 +43,6 @@ pub fn makeRequest(allocator: std.mem.Allocator, request: Request) !http.Client.
     var json_stream = std.io.fixedBufferStream(buffer);
     try json.stringify(request, .{ .emit_null_optional_fields = false }, json_stream.writer());
     const json_data = json_stream.getWritten();
-
-    try temp.writeTempFile(allocator, json_data, "ask.request.json");
 
     // Make HTTP request
     var client = http.Client{ .allocator = allocator };
