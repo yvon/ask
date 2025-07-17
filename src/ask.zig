@@ -22,6 +22,11 @@ pub fn main() !void {
         std.process.exit(0);
     }
 
+    const request = api.buildRequest(allocator, config, content) catch {
+        std.debug.print(api.invalidConfigMessage, .{});
+        std.process.exit(1);
+    };
+
     // Spawn child processes (pager, git apply)
     var pipe_manager = pipe.Manager.init(allocator);
     defer pipe_manager.deinit();
@@ -32,7 +37,6 @@ pub fn main() !void {
     }
 
     // Request LLM
-    const request = try api.buildRequest(allocator, config, content);
     var response = try api.makeRequest(allocator, request);
     var iterator = try streaming.Iterator.init(allocator, &response);
 

@@ -71,13 +71,13 @@ pub fn build(allocator: std.mem.Allocator, config: cli.Config) ![]const u8 {
     for (files.items) |file| {
         const result = std.process.Child.run(.{
             .allocator = allocator,
-            .argv = &[_][]const u8{ "git", "diff", "--no-index", "/dev/null", file },
+            .argv = &[_][]const u8{ "cat", "-n", file },
         }) catch |err| {
-            std.debug.print("Error running diff for file '{s}': {any}\n", .{ file, err });
+            std.debug.print("Error printing file '{s}': {any}\n", .{ file, err });
             continue;
         };
 
-        try writer.print("```diff\n{s}```\n", .{result.stdout});
+        try writer.print("$ cat -n {s}\n{s}\n", .{ file, result.stdout });
     }
 
     const is_tty = std.io.getStdIn().isTty();

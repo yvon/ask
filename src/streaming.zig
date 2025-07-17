@@ -3,11 +3,11 @@ const http = std.http;
 const json = std.json;
 
 pub const Event = struct {
-    type: []const u8,
-    delta: ?struct {
-        type: []const u8,
-        text: ?[]const u8 = null,
-    } = null,
+    choices: []const struct {
+        delta: ?struct {
+            content: ?[]const u8,
+        },
+    },
 };
 
 pub const Iterator = struct {
@@ -52,25 +52,17 @@ pub const Iterator = struct {
 
                     const parsed = json.parseFromSlice(Event, self.allocator, data_json, .{
                         .ignore_unknown_fields = true,
-                    }) catch {
-                        continue;
-                    };
+                    }) catch continue;
+
                     defer parsed.deinit();
 
-                    if (std.mem.eql(u8, parsed.value.type, "content_block_delta")) {
-                        if (parsed.value.delta) |delta| {
-                            if (std.mem.eql(u8, delta.type, "text_delta")) {
-                                if (delta.text) |text| {
-                                    const owned_text = try self.allocator.dupe(u8, text);
-                                    return owned_text;
-                                }
+                    if (parsed.value.choices.len > 0) {
+                        if (parsed.value.choices[0].delta) |delta| {
+                            if (delta.content) |content| {
+                                const owned_content = try self.allocator.dupe(u8, content);
+                                return owned_content;
                             }
                         }
-                    }
-
-                    if (std.mem.eql(u8, parsed.value.type, "message_stop")) {
-                        self.finished = true;
-                        return null;
                     }
                 }
             } else {
