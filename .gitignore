@@ -1,6 +1,2 @@
 *.o
-*.obj
 ask
-ask.exe
-ask.pdb
-dist
