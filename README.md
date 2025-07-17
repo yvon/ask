@@ -53,6 +53,12 @@ Examples:
   ask - < data
 ```
 
----
+## Pager
 
+STDOUT is piped to a pager. It defaults to `PAGER` environment variable or `less` if not set.  
+Disable it by setting it to `PAGER=cat`.
+
+My preference goes to `less -XE` (prevents clearing screen and quits if output fits on one screen).
+
+---
 Most of the code in this project has been written by hand. What was not has been carefully read and validated.
