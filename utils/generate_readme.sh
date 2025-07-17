@@ -6,10 +6,9 @@ cd $(dirname "$0")
 cat <<EOF
 # ask
 
-A simple CLI tool to interact with Claude AI via the Anthropic API.
+A simple CLI tool to interact with LLMs via various APIs.
 
 ## Beliefs
-
 1. **One-shot prompting is more effective than conversations** - I find it better to craft a single, well-thought-out prompt and iterate on it if needed, rather than having back-and-forth conversations with the model.
 
 2. **Full prompt control matters** - I want complete visibility and control over what's sent to the LLM, without agents hiding information or adding unnecessary complexity.
@@ -23,13 +22,6 @@ cat ../src/usage.txt
 echo '```'
 
 cat <<EOF
-
-## Pager
-
-STDOUT is piped to a pager. It defaults to \`PAGER\` environment variable or \`less\` if not set.  
-Disable it by setting it to \`PAGER=cat\`.
-
-My preference goes to \`less -XE\` (prevents clearing screen and quits if output fits on one screen).
 
 ---
 Most of the code in this project has been written by hand. What was not has been carefully read and validated.

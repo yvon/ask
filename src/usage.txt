@@ -17,12 +17,12 @@ Options:
   -h, --help               Show this help message
 
 Environment Variables:
-  PAGER                    Pager for output (default: less)
+  PAGER                    Pager for output (default: less -XE)
 
 OpenAI Compatible Endpoint
-  ASK_BASE_URL             Base URL for the API endpoint
-  ASK_API_KEY              API key for authentication
-  ASK_MODEL                Model name to use
+  ASK_BASE_URL             Base url (e.g., https://openrouter.ai/api/v1)
+  ASK_API_KEY              API key
+  ASK_MODEL                Model name
 
 Anthropic
   ANTHROPIC_API_KEY        API key for Anthropic

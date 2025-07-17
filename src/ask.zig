@@ -73,7 +73,7 @@ pub fn main() !void {
 }
 
 fn pager_args(allocator: std.mem.Allocator) ![]const []const u8 {
-    const pager = std.process.getEnvVarOwned(allocator, "PAGER") catch "less";
+    const pager = std.process.getEnvVarOwned(allocator, "PAGER") catch "less -XE";
 
     var args = std.ArrayList([]const u8).init(allocator);
 
