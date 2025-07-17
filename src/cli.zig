@@ -36,10 +36,10 @@ pub fn parse(allocator: std.mem.Allocator, args: []const []const u8) Config {
             config.system = value;
         } else if (string(args, "--model", &i)) |value| {
             config.model = value;
-        } else if (eql(arg, "--diff") or eql(arg, "-d")) {
+        } else if (eql(arg, "--diff")) {
             // --diff takes precedence over --prefill
             config.prefill = "diff --git";
-        } else if (eql(arg, "--apply") or eql(arg, "-a")) {
+        } else if (eql(arg, "--apply")) {
             config.prefill = "diff --git";
             config.apply = true;
         } else if (eql(arg, "--debug-prompt")) {
