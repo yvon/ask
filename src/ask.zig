@@ -46,7 +46,7 @@ pub fn main() !void {
 
     try closeAndWait(&pager);
 
-    if (!config.diff) {
+    if (!config.apply) {
         return;
     }
 
