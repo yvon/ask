@@ -2,3 +2,4 @@ don't include folders
 don't include files once word detected
 don't pager by default
 config via env and file
+ensure we return correct code if patch fails

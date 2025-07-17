@@ -9,6 +9,7 @@ pub const Config = struct {
     model: ?[]const u8 = null,
     positional: []const []const u8 = &.{},
     interactive: bool = false,
+    diff: bool = false,
     apply: bool = false,
     debug_prompt: bool = false,
 };
@@ -39,8 +40,10 @@ pub fn parse(allocator: std.mem.Allocator, args: []const []const u8) Config {
         } else if (eql(arg, "--diff")) {
             // --diff takes precedence over --prefill
             config.prefill = "diff --git";
+            config.diff = true;
         } else if (eql(arg, "--apply")) {
             config.prefill = "diff --git";
+            config.diff = true;
             config.apply = true;
         } else if (eql(arg, "--debug-prompt")) {
             config.debug_prompt = true;

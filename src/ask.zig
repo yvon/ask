@@ -3,7 +3,6 @@ const cli = @import("cli.zig");
 const prompt = @import("prompt.zig");
 const api = @import("api.zig");
 const streaming = @import("streaming.zig");
-const pipe = @import("pipe.zig");
 
 pub fn main() !void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
@@ -27,27 +26,50 @@ pub fn main() !void {
         std.process.exit(1);
     };
 
-    // Spawn child processes (pager, git apply)
-    var pipe_manager = pipe.Manager.init(allocator);
-    defer pipe_manager.deinit();
-    defer pipe_manager.closeAllStdin();
-    try pipe_manager.addProcess(try pager_args(allocator));
-    if (config.apply) {
-        try pipe_manager.addProcess(&.{ "git", "apply", "-" });
-    }
+    var pager = try spawnPager(allocator);
 
     // Request LLM
+    var output = std.ArrayList(u8).init(allocator);
     var response = try api.makeRequest(allocator, request);
     var iterator = try streaming.Iterator.init(allocator, &response);
 
-    // Write output
+    // Output
     if (config.prefill) |prefill| {
-        try pipe_manager.writeToAll(prefill);
+        try pager.stdin.?.writeAll(prefill);
+        try output.appendSlice(prefill);
     }
     while (try iterator.next()) |data| {
-        try pipe_manager.writeToAll(data);
+        try pager.stdin.?.writeAll(data);
+        try output.appendSlice(data);
     }
-    try pipe_manager.writeToAll("\n");
+    try pager.stdin.?.writeAll("\n");
+
+    try closeAndWait(&pager);
+
+    if (!config.diff) {
+        return;
+    }
+
+    { // git apply --reject --recount --unidiff-zero --inaccurate-eof -
+        var git_apply = try spanGitApply(allocator);
+
+        // line by line to filter out garbage
+        var in_diff = false;
+        var lines = std.mem.splitScalar(u8, output.items, '\n');
+        while (lines.next()) |line| {
+            if (in_diff) {
+                // the LLM added content after the diff: break
+                if (line.len < 1) break;
+                if (line[0] != '+' and line[0] != '-' and line[0] != ' ') break;
+            }
+            try git_apply.stdin.?.writeAll(line);
+            try git_apply.stdin.?.writeAll("\n");
+            // diff starts after @@ line
+            if (std.mem.startsWith(u8, line, "@@")) in_diff = true;
+        }
+
+        try closeAndWait(&git_apply);
+    }
 }
 
 fn pager_args(allocator: std.mem.Allocator) ![]const []const u8 {
@@ -61,4 +83,28 @@ fn pager_args(allocator: std.mem.Allocator) ![]const []const u8 {
     }
 
     return args.toOwnedSlice();
+}
+
+fn spawnPager(allocator: std.mem.Allocator) !std.process.Child {
+    const argv = try pager_args(allocator);
+    return spawnProcess(allocator, argv);
+}
+
+fn spanGitApply(allocator: std.mem.Allocator) !std.process.Child {
+    const argv = &.{ "git", "apply", "--reject", "--recount", "--unidiff-zero", "--inaccurate-eof", "-" };
+    return spawnProcess(allocator, argv);
+}
+
+fn closeAndWait(process: *std.process.Child) !void {
+    process.stdin.?.close();
+    process.stdin = null; // or else wait() will try to close it too
+    _ = try process.wait();
+}
+
+fn spawnProcess(allocator: std.mem.Allocator, args: []const []const u8) !std.process.Child {
+    var process = std.process.Child.init(args, allocator);
+    process.stdin_behavior = .Pipe;
+
+    try process.spawn();
+    return process;
 }
