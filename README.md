@@ -47,7 +47,7 @@ OpenAI
 
 Examples:
   ask "who created Zig language?"
-  ask main.c "extract parsing to dedicated function"
+  ask --apply main.c "extract parsing to dedicated function"
   make 2>&1 | ask "why this error?"
   ask - < data
 ```
