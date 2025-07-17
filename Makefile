@@ -12,6 +12,10 @@ clean:
 release:
 	zig build-exe -O ReleaseSmall -fstrip -fsingle-threaded $(FLAGS) $(SRC)
 
+archive: release
+	tar -czf ask-$(shell uname -m).tar.gz ask
+	@echo "Created archive: ask-$(shell uname -m).tar.gz"
+
 install:
 	cp ask ~/.local/bin
 
