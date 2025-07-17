@@ -132,5 +132,11 @@ pub fn makeRequest(allocator: std.mem.Allocator, request: Request) !http.Client.
     try req.finish();
     try req.wait();
 
+    if (req.response.status != http.Status.ok) {
+        const len = try req.readAll(buffer);
+        std.debug.print("%{s}\n", .{buffer[0..len]});
+        std.process.exit(1);
+    }
+
     return req;
 }
