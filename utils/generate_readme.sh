@@ -21,7 +21,7 @@ cat <<EOF
 
 1. I find it better to craft a single, well-thought-out prompt and iterate on it if needed, rather than having back-and-forth conversations with the model.
 
-2. I want complete visibility and control over what's sent to the LLM, without agents hiding information or adding unnecessary complexity.
+2. I want complete visibility and control over what's sent to the LLM.
 
 3. LLMs consume significant energy, so minimizing token usage is not just cost-effective but also more environmentally conscious.
 
