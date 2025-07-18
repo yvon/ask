@@ -7,11 +7,13 @@ const streaming = @import("streaming.zig");
 const Output = struct {
     content: std.ArrayList(u8),
     pager: std.process.Child,
+    prefill: []const u8,
 
-    pub fn init(allocator: std.mem.Allocator) !Output {
+    pub fn init(allocator: std.mem.Allocator, prefill: ?[]const u8) !Output {
         return Output{
             .content = std.ArrayList(u8).init(allocator),
             .pager = try spawnPager(allocator),
+            .prefill = prefill orelse "",
         };
     }
 
@@ -20,6 +22,10 @@ const Output = struct {
     }
 
     pub fn append(self: *Output, data: []const u8) !void {
+        if (self.content.items.len == 0 and !std.mem.startsWith(u8, data, self.prefill)) {
+            try self.append(self.prefill);
+        }
+
         try self.content.appendSlice(data);
         try self.pager.stdin.?.writeAll(data);
     }
@@ -51,16 +57,12 @@ pub fn main() !void {
         std.process.exit(1);
     };
 
-    var output = try Output.init(allocator);
+    var output = try Output.init(allocator, config.prefill);
     defer output.deinit();
 
     // Request LLM
     var response = try api.makeRequest(allocator, request);
     var stream = try streaming.Iterator.init(allocator, &response);
-
-    if (config.prefill) |prefill| {
-        try output.append(prefill);
-    }
 
     if (!config.diff) {
         while (try stream.next()) |data| {
