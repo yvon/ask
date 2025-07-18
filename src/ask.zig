@@ -7,13 +7,11 @@ const streaming = @import("streaming.zig");
 const Output = struct {
     content: std.ArrayList(u8),
     pager: std.process.Child,
-    prefill: []const u8,
 
-    pub fn init(allocator: std.mem.Allocator, prefill: ?[]const u8) !Output {
+    pub fn init(allocator: std.mem.Allocator) !Output {
         return Output{
             .content = std.ArrayList(u8).init(allocator),
             .pager = try spawnPager(allocator),
-            .prefill = prefill orelse "",
         };
     }
 
@@ -22,10 +20,6 @@ const Output = struct {
     }
 
     pub fn append(self: *Output, data: []const u8) !void {
-        if (self.content.items.len == 0 and !std.mem.startsWith(u8, data, self.prefill)) {
-            try self.append(self.prefill);
-        }
-
         try self.content.appendSlice(data);
         try self.pager.stdin.?.writeAll(data);
     }
@@ -57,13 +51,24 @@ pub fn main() !void {
         std.process.exit(1);
     };
 
-    var output = try Output.init(allocator, config.prefill);
+    var output = try Output.init(allocator);
     defer output.deinit();
 
     // Request LLM
     var response = try api.makeRequest(allocator, request);
     var stream = try streaming.Iterator.init(allocator, &response);
 
+    // Compare the initial data with the prefill. Prepend it if required.
+    if (config.prefill) |prefill| {
+        if (try stream.next()) |data| {
+            if (!std.mem.startsWith(u8, data, prefill)) {
+                try output.append(prefill);
+            }
+            try output.append(data);
+        }
+    }
+
+    // No specific format expected, just output the data and exit
     if (!config.diff) {
         while (try stream.next()) |data| {
             try output.append(data);
@@ -74,8 +79,8 @@ pub fn main() !void {
         std.process.exit(0);
     }
 
+    // Here comes the fun part: cleanup generated diffs
     var buffer = try std.ArrayList(u8).initCapacity(allocator, 4048);
-    var in_diff = false;
 
     outer: while (try stream.next()) |data| {
         var it = std.mem.splitScalar(u8, data, '\n');
@@ -85,13 +90,16 @@ pub fn main() !void {
             if (it.peek() != null) {
                 try buffer.append('\n');
 
-                if (in_diff) {
-                    const c = buffer.items[0];
-                    if (c != '+' and c != '-' and c != ' ') break :outer;
-                } else {
-                    if (std.mem.startsWith(u8, buffer.items, "@@")) {
-                        in_diff = true;
-                    }
+                if (buffer.items[0] != '+' and
+                    buffer.items[0] != '-' and
+                    buffer.items[0] != ' ' and
+                    !std.mem.startsWith(u8, buffer.items, "diff") and
+                    !std.mem.startsWith(u8, buffer.items, "index") and
+                    !std.mem.startsWith(u8, buffer.items, "---") and
+                    !std.mem.startsWith(u8, buffer.items, "+++") and
+                    !std.mem.startsWith(u8, buffer.items, "@@"))
+                {
+                    break :outer;
                 }
 
                 try output.append(buffer.items);
@@ -102,6 +110,7 @@ pub fn main() !void {
 
     try output.close();
 
+    // Apply the generated diff
     if (config.apply) {
         var git_apply = try spanGitApply(allocator);
         try git_apply.stdin.?.writeAll(output.content.items);
