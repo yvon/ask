@@ -4,6 +4,31 @@ const prompt = @import("prompt.zig");
 const api = @import("api.zig");
 const streaming = @import("streaming.zig");
 
+const Output = struct {
+    content: std.ArrayList(u8),
+    pager: std.process.Child,
+
+    pub fn init(allocator: std.mem.Allocator) !Output {
+        return Output{
+            .content = std.ArrayList(u8).init(allocator),
+            .pager = try spawnPager(allocator),
+        };
+    }
+
+    pub fn deinit(self: *Output) void {
+        self.content.deinit();
+    }
+
+    pub fn append(self: *Output, data: []const u8) !void {
+        try self.content.appendSlice(data);
+        try self.pager.stdin.?.writeAll(data);
+    }
+
+    pub fn close(self: *Output) !void {
+        try closeAndWait(&self.pager);
+    }
+};
+
 pub fn main() !void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
@@ -26,53 +51,63 @@ pub fn main() !void {
         std.process.exit(1);
     };
 
-    var pager = try spawnPager(allocator);
+    var output = try Output.init(allocator);
+    defer output.deinit();
 
     // Request LLM
-    var output = std.ArrayList(u8).init(allocator);
     var response = try api.makeRequest(allocator, request);
-    var iterator = try streaming.Iterator.init(allocator, &response);
+    var stream = try streaming.Iterator.init(allocator, &response);
 
-    // Output
     if (config.prefill) |prefill| {
-        try pager.stdin.?.writeAll(prefill);
-        try output.appendSlice(prefill);
-    }
-    while (try iterator.next()) |data| {
-        try pager.stdin.?.writeAll(data);
-        try output.appendSlice(data);
-    }
-    try pager.stdin.?.writeAll("\n");
-
-    try closeAndWait(&pager);
-
-    if (!config.apply) {
-        return;
+        try output.append(prefill);
     }
 
-    { // git apply --reject --recount --unidiff-zero --inaccurate-eof -
-        var git_apply = try spanGitApply(allocator);
-
-        // line by line to filter out garbage
-        var in_diff = false;
-        var lines = std.mem.splitScalar(u8, output.items, '\n');
-        while (lines.next()) |line| {
-            if (in_diff) {
-                // the LLM added content after the diff: break
-                if (line.len < 1) break;
-                if (line[0] != '+' and line[0] != '-' and line[0] != ' ') break;
-            }
-            try git_apply.stdin.?.writeAll(line);
-            try git_apply.stdin.?.writeAll("\n");
-            // diff starts after @@ line
-            if (std.mem.startsWith(u8, line, "@@")) in_diff = true;
+    if (!config.diff) {
+        while (try stream.next()) |data| {
+            try output.append(data);
         }
+        try output.append("\n");
+        try output.close();
 
+        std.process.exit(0);
+    }
+
+    var buffer = try std.ArrayList(u8).initCapacity(allocator, 4048);
+    var in_diff = false;
+
+    outer: while (try stream.next()) |data| {
+        var it = std.mem.splitScalar(u8, data, '\n');
+        while (it.next()) |line| {
+            try buffer.appendSlice(line);
+
+            if (it.peek() != null) {
+                try buffer.append('\n');
+
+                if (in_diff) {
+                    const c = buffer.items[0];
+                    if (c != '+' and c != '-' and c != ' ') break :outer;
+                } else {
+                    if (std.mem.startsWith(u8, buffer.items, "@@")) {
+                        in_diff = true;
+                    }
+                }
+
+                try output.append(buffer.items);
+                buffer.clearRetainingCapacity();
+            }
+        }
+    }
+
+    try output.close();
+
+    if (config.apply) {
+        var git_apply = try spanGitApply(allocator);
+        try git_apply.stdin.?.writeAll(output.content.items);
         try closeAndWait(&git_apply);
     }
 }
 
-fn pager_args(allocator: std.mem.Allocator) ![]const []const u8 {
+fn pagerArgs(allocator: std.mem.Allocator) ![]const []const u8 {
     const pager = std.process.getEnvVarOwned(allocator, "PAGER") catch "less -XE";
 
     var args = std.ArrayList([]const u8).init(allocator);
@@ -86,12 +121,12 @@ fn pager_args(allocator: std.mem.Allocator) ![]const []const u8 {
 }
 
 fn spawnPager(allocator: std.mem.Allocator) !std.process.Child {
-    const argv = try pager_args(allocator);
+    const argv = try pagerArgs(allocator);
     return spawnProcess(allocator, argv);
 }
 
 fn spanGitApply(allocator: std.mem.Allocator) !std.process.Child {
-    const argv = &.{ "git", "apply", "--reject", "--recount", "--unidiff-zero", "--inaccurate-eof", "-" };
+    const argv = &.{ "git", "apply", "--reject", "--recount", "-" };
     return spawnProcess(allocator, argv);
 }
 

@@ -4,4 +4,4 @@ config via env and file
 ensure we return correct code if patch fails
 stdout when less is not present
 error message when git is missing
-diff output should be cleaned
+close stream when diff ends
