@@ -5,7 +5,7 @@ A simple CLI tool to interact with LLMs via various APIs.
 ```
 Usage: ask [OPTIONS] [FILES...] [PROMPT...]
 
-Question AI via various providers. Create and apply patches.
+Question AI via various providers. Include local files into your prompts.
 
 Arguments:
   FILES...     Input files to include in the prompt
@@ -17,8 +17,6 @@ Options:
   --prefill <text>         Prefill the assistant's response
   --system <text>          System message to set context
   --model <name>           Model to use (overrides environment variables)
-  --diff                   Generate a git patch
-  --apply                  Apply the generated patch (implies --diff)
   -h, --help               Show this help message
 
 Environment Variables:
@@ -39,7 +37,7 @@ OpenAI
 
 Examples:
   ask "who created Zig language?"
-  ask --apply main.c "extract parsing to dedicated function"
+  ask main.c "extract parsing to dedicated function"
   make 2>&1 | ask "why this error?"
   ask - < data
 ```
@@ -47,11 +45,14 @@ Examples:
 ---
 
 ## Beliefs
-1. **One-shot prompting is more effective than conversations** - I find it better to craft a single, well-thought-out prompt and iterate on it if needed, rather than having back-and-forth conversations with the model.
 
-2. **Full prompt control matters** - I want complete visibility and control over what's sent to the LLM, without agents hiding information or adding unnecessary complexity.
+1. I find it better to craft a single, well-thought-out prompt and iterate on it if needed, rather than having back-and-forth conversations with the model.
 
-3. **Token efficiency is both practical and responsible** - LLMs consume significant energy, so minimizing token usage is not just cost-effective but also more environmentally conscious.
+2. I want complete visibility and control over what's sent to the LLM, without agents hiding information or adding unnecessary complexity.
+
+3. LLMs consume significant energy, so minimizing token usage is not just cost-effective but also more environmentally conscious.
+
+4. LLM patches are often flawed, and I prefer manual review and selective integration over automatic application.
 
 ---
 Most of the code in this project has been written by hand. What was not has been carefully read and validated.

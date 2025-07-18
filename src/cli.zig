@@ -9,23 +9,7 @@ pub const Config = struct {
     model: ?[]const u8 = null,
     positional: []const []const u8 = &.{},
     interactive: bool = false,
-    diff: bool = false,
-    apply: bool = false,
     debug_prompt: bool = false,
-
-    pub fn requestDiff(self: *Config, allocator: std.mem.Allocator) void {
-        self.diff = true;
-        self.prefill = "diff --git";
-
-        // Some models don't support prefill so we have to provide instructions.
-        const b = "Respond with an unified diff. Start your response with diff --git";
-
-        if (self.system) |a| {
-            self.system = std.fmt.allocPrint(allocator, "{s}\n{s}", .{ a, b }) catch unreachable;
-        } else {
-            self.system = b;
-        }
-    }
 };
 
 pub fn parse(allocator: std.mem.Allocator, args: []const []const u8) Config {
@@ -51,11 +35,6 @@ pub fn parse(allocator: std.mem.Allocator, args: []const []const u8) Config {
             config.system = value;
         } else if (string(args, "--model", &i)) |value| {
             config.model = value;
-        } else if (eql(arg, "--diff")) {
-            config.requestDiff(allocator);
-        } else if (eql(arg, "--apply")) {
-            config.requestDiff(allocator);
-            config.apply = true;
         } else if (eql(arg, "--debug-prompt")) {
             config.debug_prompt = true;
         } else {

@@ -5,22 +5,9 @@ const api = @import("api.zig");
 const streaming = @import("streaming.zig");
 
 const Output = struct {
-    content: std.ArrayList(u8),
     pager: std.process.Child,
 
-    pub fn init(allocator: std.mem.Allocator) !Output {
-        return Output{
-            .content = std.ArrayList(u8).init(allocator),
-            .pager = try spawnPager(allocator),
-        };
-    }
-
-    pub fn deinit(self: *Output) void {
-        self.content.deinit();
-    }
-
     pub fn append(self: *Output, data: []const u8) !void {
-        try self.content.appendSlice(data);
         try self.pager.stdin.?.writeAll(data);
     }
 
@@ -51,71 +38,22 @@ pub fn main() !void {
         std.process.exit(1);
     };
 
-    var output = try Output.init(allocator);
-    defer output.deinit();
+    var output = Output{ .pager = try spawnPager(allocator) };
 
     // Request LLM
     var response = try api.makeRequest(allocator, request);
     var stream = try streaming.Iterator.init(allocator, &response);
 
-    // Compare the initial data with the prefill. Prepend it if required.
+    // Output
     if (config.prefill) |prefill| {
-        if (try stream.next()) |data| {
-            if (!std.mem.startsWith(u8, data, prefill)) {
-                try output.append(prefill);
-            }
-            try output.append(data);
-        }
+        try output.append(prefill);
     }
 
-    // No specific format expected, just output the data and exit
-    if (!config.diff) {
-        while (try stream.next()) |data| {
-            try output.append(data);
-        }
-        try output.append("\n");
-        try output.close();
-
-        std.process.exit(0);
+    while (try stream.next()) |data| {
+        try output.append(data);
     }
-
-    // Here comes the fun part: cleanup generated diffs
-    var buffer = try std.ArrayList(u8).initCapacity(allocator, 4048);
-
-    outer: while (try stream.next()) |data| {
-        var it = std.mem.splitScalar(u8, data, '\n');
-        while (it.next()) |line| {
-            try buffer.appendSlice(line);
-
-            if (it.peek() != null) {
-                try buffer.append('\n');
-
-                if (buffer.items[0] != '+' and
-                    buffer.items[0] != '-' and
-                    buffer.items[0] != ' ' and
-                    !std.mem.startsWith(u8, buffer.items, "diff") and
-                    !std.mem.startsWith(u8, buffer.items, "index") and
-                    !std.mem.startsWith(u8, buffer.items, "---") and
-                    !std.mem.startsWith(u8, buffer.items, "+++") and
-                    !std.mem.startsWith(u8, buffer.items, "@@"))
-                {
-                    break :outer;
-                }
-
-                try output.append(buffer.items);
-                buffer.clearRetainingCapacity();
-            }
-        }
-    }
-
+    try output.append("\n");
     try output.close();
-
-    // Apply the generated diff
-    if (config.apply) {
-        var git_apply = try spanGitApply(allocator);
-        try git_apply.stdin.?.writeAll(output.content.items);
-        try closeAndWait(&git_apply);
-    }
 }
 
 fn pagerArgs(allocator: std.mem.Allocator) ![]const []const u8 {
@@ -133,11 +71,6 @@ fn pagerArgs(allocator: std.mem.Allocator) ![]const []const u8 {
 
 fn spawnPager(allocator: std.mem.Allocator) !std.process.Child {
     const argv = try pagerArgs(allocator);
-    return spawnProcess(allocator, argv);
-}
-
-fn spanGitApply(allocator: std.mem.Allocator) !std.process.Child {
-    const argv = &.{ "git", "apply", "--reject", "--recount", "-" };
     return spawnProcess(allocator, argv);
 }
 

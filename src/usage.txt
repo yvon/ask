@@ -1,6 +1,6 @@
 Usage: ask [OPTIONS] [FILES...] [PROMPT...]
 
-Question AI via various providers. Create and apply patches.
+Question AI via various providers. Include local files into your prompts.
 
 Arguments:
   FILES...     Input files to include in the prompt
@@ -12,8 +12,6 @@ Options:
   --prefill <text>         Prefill the assistant's response
   --system <text>          System message to set context
   --model <name>           Model to use (overrides environment variables)
-  --diff                   Generate a git patch
-  --apply                  Apply the generated patch (implies --diff)
   -h, --help               Show this help message
 
 Environment Variables:
@@ -34,6 +32,6 @@ OpenAI
 
 Examples:
   ask "who created Zig language?"
-  ask --apply main.c "extract parsing to dedicated function"
+  ask main.c "extract parsing to dedicated function"
   make 2>&1 | ask "why this error?"
   ask - < data
