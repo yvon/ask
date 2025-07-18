@@ -52,7 +52,4 @@ Examples:
 
 3. LLMs consume significant energy, so minimizing token usage is not just cost-effective but also more environmentally conscious.
 
-4. LLM patches are often flawed, and I prefer manual review and selective integration over automatic application.
-
----
-Most of the code in this project has been written by hand. What was not has been carefully read and validated.
+4. LLM patches are often flawed, and I prefer manual review and selective integration over automatic application. More broadly, I don't believe agents and automation represent the future of AI.
