@@ -8,11 +8,14 @@ ask: src/*.zig
 clean:
 	rm -f ask *.o
 
+release-%:
+	zig build-exe -O ReleaseSmall -fstrip -fsingle-threaded -target $* $(SRC) && \
+	tar -czf ask-$*.tar.gz ask
+
+releases: release-x86_64-linux release-aarch64-macos
+
 release:
 	zig build-exe -O ReleaseSmall -fstrip -fsingle-threaded $(SRC)
-
-archive: release
-	tar -czf ask-$(shell uname -s)-$(shell uname -m).tar.gz ask
 
 install:
 	cp ask ~/.local/bin
