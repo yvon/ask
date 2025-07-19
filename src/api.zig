@@ -5,9 +5,9 @@ const cli = @import("cli.zig");
 
 pub const invalidConfigMessage =
     \\Error: invalid API configuration. Please set one of the following:
-    \\  1. ASK_BASE_URL, ASK_API_KEY, and ASK_MODEL for OpenAI-compatible endpoint
-    \\  2. ANTHROPIC_API_KEY for Anthropic
-    \\  3. OPENAI_API_KEY for OpenAI
+    \\  1. ANTHROPIC_API_KEY for Anthropic
+    \\  2. OPENAI_API_KEY for OpenAI
+    \\  3. OPENAI_BASE_URL, OPEN_AI_API_KEY, and ASK_MODEL for OpenAI compatible APIs
     \\
 ;
 
@@ -23,8 +23,8 @@ const Provider = struct {
         const model: ?[]const u8 = cli_model orelse
             std.process.getEnvVarOwned(allocator, "ASK_MODEL") catch null;
 
-        if (std.process.getEnvVarOwned(allocator, "ASK_BASE_URL") catch null) |base_url| {
-            const api_key = try std.process.getEnvVarOwned(allocator, "ASK_API_KEY");
+        if (std.process.getEnvVarOwned(allocator, "OPENAI_BASE_URL") catch null) |base_url| {
+            const api_key = try std.process.getEnvVarOwned(allocator, "OPENAI_API_KEY");
             return Self{
                 .base_url = base_url,
                 .api_key = api_key,

@@ -11,18 +11,14 @@ Options:
   --model <name>           Model to use (overrides environment variables)
   -h, --help               Show this help message
 
-OpenAI Compatible Endpoint
-  ASK_BASE_URL             Base url (e.g., https://openrouter.ai/api/v1)
-  ASK_API_KEY              API key
-  ASK_MODEL                Model name
-
 Anthropic
   ANTHROPIC_API_KEY        API key for Anthropic
-  ASK_MODEL                Model to use (default: claude-sonnet-4-20250514)
+  ASK_MODEL                Default to claude-sonnet-4-20250514
 
 OpenAI
+  OPENAI_BASE_URL          Optionnal (e.g., https://openrouter.ai/api/v1)
   OPENAI_API_KEY           API key for OpenAI
-  ASK_MODEL                Model to use (default: gpt-4.1-2025-04-14)
+  ASK_MODEL                Default to gpt-4.1-2025-04-14 when base url is not set
 
 Examples:
   ask "who created Zig language?"
