@@ -12,7 +12,7 @@ release-%:
 	zig build-exe -O ReleaseSmall -fstrip -fsingle-threaded -target $* $(SRC) && \
 	tar -czf ask-$*.tar.gz ask
 
-releases: release-x86_64-linux release-aarch64-macos
+releases: release-x86_64-linux release-aarch64-macos release-x86_64-macos release-aarch64-linux
 
 release:
 	zig build-exe -O ReleaseSmall -fstrip -fsingle-threaded $(SRC)
