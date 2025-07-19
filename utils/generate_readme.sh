@@ -12,46 +12,37 @@ A minimalist CLI tool to interact with LLMs.
 $(cat ../src/usage.txt)
 \`\`\`
 
-## Minimalist
+## Some beliefs
 
-I removed a lot of features during the development of this tool, trying to embrace the Unix philosophy: minimalist and modular.
+I find it better to craft a single, well-thought-out prompt and iterate on it if needed, rather than having back-and-forth conversations with the model.
 
-I initially allowed files to be passed as arguments. Those were added to the prompt with their filename as a prefix but that's what pipes are made for. You may use utilities like [bat](https://github.com/sharkdp/bat) to add extra formatting. I also don't want to impose a specific format.
+I want complete visibility and control over what's sent to the LLM.
 
-I removed the automatic pager and the ability to generate and apply patches too.
+LLMs consume significant energy, so minimizing token usage is not just cost-effective but also more environmentally conscious.
 
-For inspiration here is my current configuration via fish functions:
+LLM patches are often flawed, and I prefer manual review and selective integration over automatic application. More broadly, I don't believe agents and automation represent the future of generative AI.
 
-\`\`\`fish
-# -- Add files to prompt --
+## History
+
+I removed many features during development, embracing the Unix philosophy of building minimalist, modular tools that do one thing well.
+
+**File handling**: I initially allowed files as arguments, automatically prefixing them with filenames in the prompt. But that's what pipes are for—and I don't want to impose a specific format. You can use utilities like [bat](https://github.com/sharkdp/bat) for advanced formatting.
+
+**Output**: I removed the automatic pager. Different users prefer different pagers (or none at all), and it's trivial to pipe the output yourself.
+
+**Patch generation**: LLMs are inconsistent and sloppy: the optimal approach varies too much.
+
+
+A sample of Bash functions:
+
+\`\`\`bash
+f() {
+    bat --style="header-filename,numbers" --color never "\$@"
+}
+
+ask() {
+    command ask "\$@" | less -XE
+}
+
 # f main.c | ask "extract parsing to dedicated function"
-#
-function f
-  bat --style="header-filename,numbers" --color never $argv
-end
-
-# -- Pager --
-# X is for no clear screen, E for automatic exit on last page
-#
-function ask
-  command ask \$argv | less -XE
-end
-
-# -- Generate patches --
-# ask_patch "create new shell script printing hello world"
-# git apply --reject --recount /tmp/patch
-#
-function ask_patch
-  ask --system="Reply with a unified diff only" \$argv | tee /tmp/patch
-end
 \`\`\`
-
-## Beliefs
-
-1. I find it better to craft a single, well-thought-out prompt and iterate on it if needed, rather than having back-and-forth conversations with the model.
-
-2. I want complete visibility and control over what's sent to the LLM.
-
-3. LLMs consume significant energy, so minimizing token usage is not just cost-effective but also more environmentally conscious.
-
-4. LLM patches are often flawed, and I prefer manual review and selective integration over automatic application. More broadly, I don't believe agents and automation represent the future of generative AI.
