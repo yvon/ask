@@ -1,5 +1,3 @@
-don't include folders
-don't include files once word detected
+add --provider option
+simplify env variables with OPENAI_BASE_URL
 config via env and file
-stdout when less is not present
-replace cat -n by system file read
