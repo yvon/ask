@@ -6,16 +6,45 @@ cd $(dirname "$0")
 cat <<EOF
 # ask
 
-A simple CLI tool to interact with LLMs via various APIs.
+A minimalist CLI tool to interact with LLMs.
 
-EOF
-echo '```'
-cat ../src/usage.txt
-echo '```'
+\`\`\`
+$(cat ../src/usage.txt)
+\`\`\`
 
-cat <<EOF
+## Minimalist
 
----
+I removed a lot of features during the development of this tool, trying to embrace the Unix philosophy: minimalist and modular.
+
+I initially allowed files to be passed as arguments. Those were added to the prompt with their filename as a prefix but that's what pipes are made for. You may use utilities like [bat](https://github.com/sharkdp/bat) to add extra formatting. I also don't want to impose a specific format.
+
+I removed the automatic pager and the ability to generate and apply patches too.
+
+For inspiration here is my current configuration via fish functions:
+
+\`\`\`fish
+# -- Add files to prompt --
+# f main.c | ask "extract parsing to dedicated function"
+#
+function f
+  bat --style="header-filename,numbers" --color never $argv
+end
+
+# -- Pager --
+# X is for no clear screen, E for automatic exit on last page
+#
+function ask
+  command ask \$argv | less -XE
+end
+
+# -- Generate patches --
+# ask_patch "create new shell script printing hello world"
+# git apply --reject --recount /tmp/patch
+#
+function ask_patch
+  ask --system="Reply with a unified diff only" \$argv | tee /tmp/patch
+end
+\`\`\`
 
 ## Beliefs
 

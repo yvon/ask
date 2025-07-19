@@ -1,14 +1,11 @@
 # ask
 
-A simple CLI tool to interact with LLMs via various APIs.
+A minimalist CLI tool to interact with LLMs.
 
 ```
-Usage: ask [OPTIONS] [FILES...] [PROMPT...]
-
-Question AI via various providers. Include local files into your prompts.
+Usage: ask [OPTIONS] [PROMPT...]
 
 Arguments:
-  FILES...     Input files to include in the prompt
   PROMPT...    Prompt text (can also be provided via stdin)
 
 Options:
@@ -18,9 +15,6 @@ Options:
   --system <text>          System message to set context
   --model <name>           Model to use (overrides environment variables)
   -h, --help               Show this help message
-
-Environment Variables:
-  PAGER                    Pager for output (default: less -XE)
 
 OpenAI Compatible Endpoint
   ASK_BASE_URL             Base url (e.g., https://openrouter.ai/api/v1)
@@ -37,12 +31,43 @@ OpenAI
 
 Examples:
   ask "who created Zig language?"
-  ask main.c "extract parsing to dedicated function"
+  ask "extract parsing to dedicated function" < main.c
   make 2>&1 | ask "why this error?"
-  ask - < data
 ```
 
----
+## Minimalist
+
+I removed a lot of features during the development of this tool, trying to embrace the Unix philosophy: minimalist and modular.
+
+I initially allowed files to be passed as arguments. Those were added to the prompt with their filename as a prefix but that's what pipes are made for. You may use utilities like [bat](https://github.com/sharkdp/bat) to add extra formatting. I also don't want to impose a specific format.
+
+I removed the automatic pager and the ability to generate and apply patches too.
+
+For inspiration here is my current configuration via fish functions:
+
+```fish
+# -- Add files to prompt --
+# f main.c | ask "extract parsing to dedicated function"
+#
+function f
+  bat --style="header-filename,numbers" --color never 
+end
+
+# -- Pager --
+# X is for no clear screen, E for automatic exit on last page
+#
+function ask
+  command ask $argv | less -XE
+end
+
+# -- Generate patches --
+# ask_patch "create new shell script printing hello world"
+# git apply --reject --recount /tmp/patch
+#
+function ask_patch
+  ask --system="Reply with a unified diff only" $argv | tee /tmp/patch
+end
+```
 
 ## Beliefs
 
