@@ -26,14 +26,14 @@ LLM patches are often flawed, and I prefer manual review and selective integrati
 
 I removed many features during development, embracing the Unix philosophy of building minimalist, modular tools that do one thing well.
 
-**File handling**: I initially allowed files as arguments, automatically prefixing them with filenames in the prompt. But that's what pipes are for—and I don't want to impose a specific format. You can use utilities like [bat](https://github.com/sharkdp/bat) for advanced formatting.
+File handling: I initially allowed files as arguments, automatically prefixing them with filenames in the prompt. But that's what pipes are for—and I don't want to impose a specific format. You can use utilities like [bat](https://github.com/sharkdp/bat) for advanced formatting.
 
-**Output**: I removed the automatic pager. Different users prefer different pagers (or none at all), and it's trivial to pipe the output yourself.
+Output: I removed the automatic pager. Different users prefer different pagers (or none at all), and it's trivial to pipe the output yourself.
 
-**Patch generation**: LLMs are inconsistent and sloppy: the optimal approach varies too much.
+Patch generation: LLMs are inconsistent and sloppy: the optimal approach varies too much.
 
 
-A sample of Bash functions:
+An example of Bash functions:
 
 \`\`\`bash
 f() {
