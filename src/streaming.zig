@@ -1,6 +1,4 @@
 const std = @import("std");
-const http = std.http;
-const json = std.json;
 
 pub const Event = struct {
     choices: []const struct {
@@ -12,13 +10,13 @@ pub const Event = struct {
 
 pub const Iterator = struct {
     allocator: std.mem.Allocator,
-    response_reader: http.Client.Request.Reader,
+    response_reader: std.http.Client.Request.Reader,
     line_buffer: []u8,
     finished: bool = false,
 
     const Self = @This();
 
-    pub fn init(allocator: std.mem.Allocator, req: *http.Client.Request) !Self {
+    pub fn init(allocator: std.mem.Allocator, req: *std.http.Client.Request) !Self {
         const line_buffer = try allocator.alloc(u8, 4096);
         return Self{
             .allocator = allocator,
@@ -50,7 +48,7 @@ pub const Iterator = struct {
                 if (std.mem.startsWith(u8, trimmed, "data: ")) {
                     const data_json = trimmed[6..];
 
-                    const parsed = json.parseFromSlice(Event, self.allocator, data_json, .{
+                    const parsed = std.json.parseFromSlice(Event, self.allocator, data_json, .{
                         .ignore_unknown_fields = true,
                     }) catch continue;
 
